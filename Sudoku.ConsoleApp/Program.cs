@@ -15,7 +15,7 @@ namespace Sudoku.ConsoleApp
                 Console.WriteLine("Please adjust App.config to include a sample board.");
                
             };
-            var testBoard = new Board(sampleBoards["easy"]);
+            var testBoard = new Board(sampleBoards["hard"]);
             var thisGame = new Game(testBoard);
             thisGame.Play();
         }

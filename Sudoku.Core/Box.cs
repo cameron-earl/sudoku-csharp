@@ -10,24 +10,24 @@
 
         public override string ToString()
         {
-            var houseIndex = HouseNumber - 1;
-            var isTop = houseIndex/3 == 0;
+            int houseIndex = HouseNumber - 1;
+            bool isTop = houseIndex/3 == 0;
             bool isBottom = houseIndex/3 == 2;
             bool isRight = houseIndex%3 == 2;
             bool isLeft = houseIndex%3 == 0;
-            var topLeft = (isLeft)?((isTop)?'╔':'╠'):((isTop)?'╦':'╬');
-            var topRight = (isRight) ? ((isTop) ? '╗' : '╣') : ((isTop) ? '╦' : '╬');
-            var bottomLeft = (isLeft) ? ((isBottom) ? '╚' : '╠') : ((isBottom) ? '╩' : '╬');
-            var bottomRight = (isRight) ? ((isBottom) ? '╝' : '╣') : ((isBottom) ? '╩' : '╬');
-            var leftSide = (isLeft)?'╠':'╬';
-            var rightSide = (isRight)?'╣':'╬';
-            var top = (isTop)?'╦': '╬';
-            var bottom = (isBottom)?'╩': '╬';
+            char topLeft = (isLeft)?((isTop)?'╔':'╠'):((isTop)?'╦':'╬');
+            char topRight = (isRight) ? ((isTop) ? '╗' : '╣') : ((isTop) ? '╦' : '╬');
+            char bottomLeft = (isLeft) ? ((isBottom) ? '╚' : '╠') : ((isBottom) ? '╩' : '╬');
+            char bottomRight = (isRight) ? ((isBottom) ? '╝' : '╣') : ((isBottom) ? '╩' : '╬');
+            char leftSide = (isLeft)?'╠':'╬';
+            char rightSide = (isRight)?'╣':'╬';
+            char top = (isTop)?'╦': '╬';
+            char bottom = (isBottom)?'╩': '╬';
 
-            var topEdge = $"{topLeft}═══{top}═══{top}═══{topRight}\n";
-            var divider = $"{leftSide}───┼───┼───{rightSide}\n";
-            var bottomEdge = $"{bottomLeft}═══{bottom}═══{bottom}═══{bottomRight}\n";
-            var boxString = topEdge;
+            string topEdge = $"{topLeft}═══{top}═══{top}═══{topRight}\n";
+            string divider = $"{leftSide}───┼───┼───{rightSide}\n";
+            string bottomEdge = $"{bottomLeft}═══{bottom}═══{bottom}═══{bottomRight}\n";
+            string boxString = topEdge;
             for (int row = 0; row < Constants.BoardLength/3; row++)
             {
                 boxString += "║ ";

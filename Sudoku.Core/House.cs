@@ -23,11 +23,12 @@ namespace Sudoku.Core
 
         public void UpdateCandidates()
         {
+            //TODO malfunctioning somehow?
             for (int i = 0; i < Cells.Count; i++)
             {
-                for (int j = 0; j != i && Cells[i].Value > 0 && j < Cells.Count; j++)
+                for (int j = 0; Cells[i].Value > 0 && j < Cells.Count; j++)
                 {
-                    Cells[j].Candidates.EliminateCandidate(Cells[i].Value);
+                    if (j != i) Cells[j].Candidates.EliminateCandidate(Cells[i].Value);
                 }
             }
         }
@@ -42,11 +43,26 @@ namespace Sudoku.Core
                 {
                     if (Cells[i].Value == Cells[j].Value)
                     {
+#if (DEBUG)
+                        {
+                            Console.WriteLine($"Invalid House! Cells {Cells[i].CellId} ({Cells[i].Value}) & {Cells[j].CellId} ({Cells[j].Value}) - {ToSimpleString()}");
+                        }
+#endif
                         return false;
                     }
                 }
             }
             return true;
+        }
+
+        public string ToSimpleString()
+        {
+            string str = $"House: {HouseNumber} - ";
+            foreach (var cell in Cells)
+            {
+                str += $"{cell}";
+            }
+            return str;
         }
     }
 }

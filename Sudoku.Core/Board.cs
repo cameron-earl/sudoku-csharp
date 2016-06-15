@@ -81,6 +81,44 @@ namespace Sudoku.Core
             return boardString;
         }
 
+        public string ToSimpleString()
+        {
+            string str = "";
+            foreach (House row in Rows)
+            {
+                str = row.Cells.Aggregate(str, (current, cell) => current + $"{cell}");
+                str += " ";
+            }
+            return str;
+        }
+
+        public string CandidatesToString()
+        {
+            string candidateStr = "";
+            for (char row = 'A'; row <= 'I'; row++)
+            {
+                candidateStr += $"{row}: ";
+                for (int col = 1; col <= 9; col++)
+                {
+                    int cellId = Cell.GetCellId((row + 1 -'A'), col);
+                    Cell cell = GetCell(cellId);
+                    if (cell.Value != 0) continue;
+                    CandidateSet candidates = cell.Candidates;
+                    candidateStr += $"{col}(";
+                    for (int val = 1; val <= 9; val++ )
+                    {
+                        if (candidates.Contains(val))
+                        {
+                            candidateStr += $"{val}";
+                        }
+                    }
+                    candidateStr += $")[{candidates.Count()}] ";
+                }
+                candidateStr += '\n';
+            }
+            return candidateStr;
+        }
+        
         public bool IsSolved()
         {
             return Cells.All(cell => cell.Value != 0) && IsValid();
@@ -132,17 +170,36 @@ namespace Sudoku.Core
 
         public void SetCellValue(int cellId, int newValue, Constants.SolveMethod solveMethod)
         {
-            var cell = GetCell(cellId);
+            Cell cell = GetCell(cellId);
+            House row = Rows[cell.RowNumber - 1];
+            House col = Columns[cell.ColumnNumber - 1];
+            House box = Boxes[cell.BoxNumber - 1];
+
+            //Validate move legality
+            if (cell.SolveMethod == Constants.SolveMethod.Provided)
+            {
+                throw new Exception("Tried to change a provided value");
+            }
             if (cell.Value > 0 && (solveMethod != Constants.SolveMethod.PlayerInput 
                 || (solveMethod == Constants.SolveMethod.PlayerInput && cell.SolveMethod != Constants.SolveMethod.PlayerInput)))
             {
                 throw new Exception("Tried to change solved value");
             }
+            if (newValue > 0 && !cell.Candidates.Contains(newValue))
+            {
+                throw new Exception("Tried to change value to an eliminated candidate.");
+            }
+            if (row.Contains(newValue) || col.Contains(newValue) || box.Contains(newValue))
+            {
+                throw new Exception("New value is already in house.");
+            }
+
+            //Change value and update candidates in its houses
             cell.Value = newValue;
             cell.SolveMethod = solveMethod;
-            Rows[cell.RowNumber - 1].UpdateCandidates();
-            Columns[cell.ColumnNumber - 1].UpdateCandidates();
-            Boxes[cell.BoxNumber - 1].UpdateCandidates();
+            row.UpdateCandidates(newValue);
+            col.UpdateCandidates(newValue);
+            box.UpdateCandidates(newValue);
         }
 
 

@@ -34,7 +34,7 @@ namespace Sudoku.Core
         public int Value
         {
             get { return _value; }
-            internal set
+            set
             {
                 if (value > Constants.BoardLength)
                 {

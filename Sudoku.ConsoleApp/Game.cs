@@ -9,8 +9,8 @@ namespace Sudoku.ConsoleApp
     {
 
         private ConsoleColor _labelColor = ConsoleColor.DarkGray;
-        private ConsoleColor _boldFrameColor = ConsoleColor.Gray;
-        private ConsoleColor _minorFrameColor = ConsoleColor.DarkGray;
+        private ConsoleColor _boldFrameColor = ConsoleColor.Black;
+        private ConsoleColor _minorFrameColor = ConsoleColor.Black;
         private ConsoleColor _providedValueColor = ConsoleColor.White;
         private ConsoleColor _playerInputColor = ConsoleColor.Gray;
         private ConsoleColor _solvedValueColor = ConsoleColor.Green;
@@ -93,7 +93,7 @@ namespace Sudoku.ConsoleApp
                 ForegroundColor = _playerInputColor;
             } else if (solveMethod == Constants.SolveMethod.NakedSingle)
             {
-                ForegroundColor = ConsoleColor.Blue;
+                ForegroundColor = ConsoleColor.DarkYellow;
             } else // Unlisted solve method
             {
                 ForegroundColor = _solvedValueColor;
@@ -118,7 +118,7 @@ namespace Sudoku.ConsoleApp
                 WriteLine("  A. Input a Value");
                 WriteLine("  B. Solve Easiest Move");
                 WriteLine("  C. Solve the Board (as much as possible)");
-                WriteLine("  D. Print candidates for a cell");
+                WriteLine("  D. Print candidates for each cell");
                 WriteLine("  E. Check board for validity");
                 WriteLine("  X. Exit program");
 
@@ -133,10 +133,17 @@ namespace Sudoku.ConsoleApp
                         if (!Solver.SolveEasiestMove()) PrintUnsolvableMessage();
                         break;
                     case 'c':
-                        if (!Solver.SolvePuzzle()) PrintUnsolvableMessage();
+                        bool changed = true;
+                        while (changed)
+                        {
+                            changed = Solver.SolveEasiestMove();
+                            PrintAllCells();
+                        }
+                        if (!Board.IsSolved()) PrintUnsolvableMessage();
+                        //if (!Solver.SolvePuzzle()) PrintUnsolvableMessage();
                         break;
                     case 'd':
-                        DisplayCandidates();
+                        DisplayCandidatesForBoard();
                         break;
                     case 'e':
                         WriteLine(Board.IsValid());
@@ -151,12 +158,18 @@ namespace Sudoku.ConsoleApp
                 }
             } while (!done && !Board.IsSolved());
 
-            if (Board.IsSolved()) PrintMessage("Congratulations! Sudoku solved!");
+            if (Board.IsSolved()) PrintMessage($"Congratulations! Sudoku solved!\n{Solver.MoveCountsToString()}{Board.ToSimpleString()}");
+        }
+
+        private void DisplayCandidatesForBoard()
+        {
+            PrintMessage(Board.CandidatesToString());
         }
 
         private void PrintUnsolvableMessage()
         {
-            PrintMessage("If you can solve this, you're smarter than I am.");
+            PrintMessage($"If you can solve this, you're smarter than I am.\n{Solver.MoveCountsToString()}");
+            
         }
 
         private void PrintMessage(string message)
@@ -167,15 +180,15 @@ namespace Sudoku.ConsoleApp
             ReadKey();
         }
 
-        private void DisplayCandidates()
+        private void DisplayCandidatesForCell()
         {
-            var coord = GetCellCoordinateInput();
+            string coord = GetCellCoordinateInput();
             if (coord == "Q")
             {
                 return;
             }
 
-            var cell = Board.GetCell(coord);
+            Cell cell = Board.GetCell(coord);
             WriteLine(cell.Candidates);
             ReadKey();
         }
@@ -183,7 +196,7 @@ namespace Sudoku.ConsoleApp
 
         private void ChangeCellValue()
         {
-            var coord = GetCellCoordinateInput();
+            string coord = GetCellCoordinateInput();
             if (coord == "Q")
             {
                 return;
@@ -332,7 +345,7 @@ namespace Sudoku.ConsoleApp
 
         private static int CursorColForCell(int cell)
         {
-            var col = Cell.GetCellCol(cell);
+            int col = Cell.GetCellCol(cell);
             return (col * 4);
         }
 

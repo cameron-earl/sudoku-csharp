@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Sudoku.Core
 {
@@ -23,12 +24,26 @@ namespace Sudoku.Core
 
         public void UpdateCandidates()
         {
-            //TODO malfunctioning somehow?
             for (int i = 0; i < Cells.Count; i++)
             {
-                for (int j = 0; Cells[i].Value > 0 && j < Cells.Count; j++)
+                if (Cells[i].Value == 0) continue;
+                for (int j = 0; j < Cells.Count; j++)
                 {
-                    if (j != i) Cells[j].Candidates.EliminateCandidate(Cells[i].Value);
+                    if (j == i || Cells[j].Value != 0) continue;
+
+                    Cells[j].Candidates.EliminateCandidate(Cells[i].Value);
+                }
+            }
+        }
+
+        public void UpdateCandidates(int val)
+        {
+            foreach (Cell cell in Cells)
+            {
+
+                if (cell.Value == 0)
+                {
+                    cell.Candidates.EliminateCandidate(val);
                 }
             }
         }
@@ -63,6 +78,11 @@ namespace Sudoku.Core
                 str += $"{cell}";
             }
             return str;
+        }
+
+        public bool Contains(int val)
+        {
+            return Cells.Any(cell => cell.Value == val);
         }
     }
 }

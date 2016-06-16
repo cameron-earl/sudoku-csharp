@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace Sudoku.Core
 {
@@ -44,26 +45,38 @@ namespace Sudoku.Core
         private bool SolveOneMove(Constants.SolveMethod method)
         {
             bool moveSolved;
-            switch (method)
-            {
-                case Constants.SolveMethod.NakedSingle:
-                    moveSolved = FindNakedSingle();
-                    break;
-                case Constants.SolveMethod.HiddenSingle:
-                    moveSolved = FindHiddenSingle();
-                    break;
-                case Constants.SolveMethod.NakedPair:
-                    moveSolved = FindNakedPair();
-                    break;
-                case Constants.SolveMethod.HiddenPair:
-                    moveSolved = FindHiddenPair();
-                    break;
-                case Constants.SolveMethod.IntersectionRemoval:
-                    moveSolved = FindIntersectionRemoval();
-                    break;
-                default:
-                    throw new Exception("Something went wrong. Update Solver.SolveOneMove.switch cases");
+            try
+            {   
+                string methodName = method.ToString();
+                //TODO "theMethod" is never set, always null.
+                MethodInfo theMethod = GetType().GetMethod(methodName, BindingFlags.NonPublic);
+                Console.WriteLine(method);
+                moveSolved = (bool) theMethod.Invoke(this, null);
             }
+            catch (Exception)
+            {
+                throw;
+            }
+            //switch (method)
+            //{
+            //    case Constants.SolveMethod.NakedSingle:
+            //        moveSolved = NakedSingle();
+            //        break;
+            //    case Constants.SolveMethod.HiddenSingle:
+            //        moveSolved = HiddenSingle();
+            //        break;
+            //    case Constants.SolveMethod.NakedPair:
+            //        moveSolved = NakedPair();
+            //        break;
+            //    case Constants.SolveMethod.HiddenPair:
+            //        moveSolved = HiddenPair();
+            //        break;
+            //    case Constants.SolveMethod.IntersectionRemoval:
+            //        moveSolved = IntersectionRemoval();
+            //        break;
+            //    default:
+            //        throw new Exception("Something went wrong. Update Solver.SolveOneMove.switch cases");
+            //}
             return moveSolved;
         }
 
@@ -82,7 +95,7 @@ namespace Sudoku.Core
         /// Starting with a random cell, solve the first cell with only one candidate.
         /// </summary>
         /// <returns></returns>
-        private bool FindNakedSingle()
+        private bool NakedSingle()
         {
             bool changed = false;
             int randCellIndex = Board.RandomCellId() - 1;
@@ -106,7 +119,7 @@ namespace Sudoku.Core
         /// Starting with a random cell in a random house, look for a candidate that appears in only one cell in a house and solve.
         /// </summary>
         /// <returns></returns>
-        private bool FindHiddenSingle()
+        private bool HiddenSingle()
         {
             var rand = new Random();
 
@@ -159,7 +172,7 @@ namespace Sudoku.Core
         /// If found, eliminate candidates from remainder of house.
         /// </summary>
         /// <returns></returns>
-        private bool FindNakedPair()
+        private bool NakedPair()
         {
 
             var rand = new Random();
@@ -207,7 +220,7 @@ namespace Sudoku.Core
         /// Eliminate all other candidates from those two cells.
         /// </summary>
         /// <returns></returns>
-        private bool FindHiddenPair()
+        private bool HiddenPair()
         {
             //TODO seems to work but isn't fully tested
             bool changed = false;
@@ -276,7 +289,7 @@ namespace Sudoku.Core
         /// Remove that candidate from all cells in the other house.
         /// </summary>
         /// <returns></returns>
-        private bool FindIntersectionRemoval()
+        private bool IntersectionRemoval()
         {
             bool changed = false;
 

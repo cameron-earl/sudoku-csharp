@@ -117,7 +117,7 @@ namespace Sudoku.Core
             int index = val - 1;
             if (Count() == 1 && Candidates[index])
             {
-                throw new Exception("Tried to eliminate the last valid candidate.");
+                throw new Exception("Tried to eliminate the last valid candidate in a cell. A previously entered value is likely incorrect.");
             }
 
             //Remove Candidate

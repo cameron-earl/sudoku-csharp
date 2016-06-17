@@ -7,10 +7,11 @@ namespace Sudoku.ConsoleApp
 {
     internal class Game
     {
+        private const bool Testing = true;
 
         private ConsoleColor _labelColor = ConsoleColor.DarkGray;
-        private ConsoleColor _boldFrameColor = ConsoleColor.Gray;
-        private ConsoleColor _minorFrameColor = ConsoleColor.DarkGray;
+        private ConsoleColor _boldFrameColor = Testing ? ConsoleColor.Black : ConsoleColor.Gray;
+        private ConsoleColor _minorFrameColor = Testing ? ConsoleColor.Black : ConsoleColor.DarkGray;
         private ConsoleColor _providedValueColor = ConsoleColor.White;
         private ConsoleColor _playerInputColor = ConsoleColor.Gray;
         private ConsoleColor _solvedValueColor = ConsoleColor.Green;

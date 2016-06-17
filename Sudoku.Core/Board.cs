@@ -49,11 +49,9 @@ namespace Sudoku.Core
         }
 
         public Cell[] Cells { get; set; } = new Cell[Constants.TotalCellCount];
-
         public House[] Rows  { get; set; } = new House[Constants.BoardLength];
         public House[] Columns { get; set; } = new House[Constants.BoardLength];
         public House[] Boxes { get; set; } = new House[Constants.BoardLength];
-
         public House[] Houses { get; set; } = new House[Constants.BoardLength * 3];
 
         
@@ -87,7 +85,7 @@ namespace Sudoku.Core
             foreach (House row in Rows)
             {
                 str = row.Cells.Aggregate(str, (current, cell) => current + $"{cell}");
-                str += " ";
+                str += " \n";
             }
             return str;
         }

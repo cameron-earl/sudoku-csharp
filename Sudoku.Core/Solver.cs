@@ -7,7 +7,8 @@ namespace Sudoku.Core
 {
     public class Solver
     {
-        private readonly Dictionary<Constants.SolveMethod, int> _moveCount = new Dictionary<Constants.SolveMethod,int>();
+        private readonly Dictionary<Constants.SolveMethod, int> _moveCount =
+            new Dictionary<Constants.SolveMethod, int>();
 
         public Solver(Board board)
         {
@@ -23,7 +24,8 @@ namespace Sudoku.Core
         public bool SolveEasiestMove()
         {
             bool moveSolved = false;
-            Constants.SolveMethod max = Enum.GetValues(typeof(Constants.SolveMethod)).Cast<Constants.SolveMethod>().Last();
+            Constants.SolveMethod max =
+                Enum.GetValues(typeof(Constants.SolveMethod)).Cast<Constants.SolveMethod>().Last();
             for (var method = Constants.SolveMethod.NakedSingle; !moveSolved && method <= max; method++)
             {
                 moveSolved = SolveOneMove(method);
@@ -34,25 +36,31 @@ namespace Sudoku.Core
 
         public string MoveCountsToString()
         {
-            return _moveCount.Aggregate("", (current, move) => current + $"{move.Key} - {move.Value}\n");
+            return _moveCount.Where(i => i.Value > 0).Aggregate("", (current, i) => current + $"{i.Key} - {i.Value}\n");
         }
 
         private static Cell[] CellsWithThisCandidateArray(IEnumerable<Cell> inList, int candidate)
         {
             return inList.Where(cell => cell.Candidates.Contains(candidate)).ToArray();
         }
-
+        
+        /// <summary>
+        /// Uses reflection to call a method by the same name as the provided enum
+        /// </summary>
+        /// <param name="method"></param>
+        /// <returns></returns>
         private bool SolveOneMove(Constants.SolveMethod method)
         {
             bool moveSolved;
             try
-            {   
+            {
                 MethodInfo theMethod = GetType().GetMethod($"{method}", BindingFlags.NonPublic | BindingFlags.Instance);
                 moveSolved = (bool) theMethod.Invoke(this, null);
             }
             catch (Exception)
             {
-                throw new Exception($"There was an attempt to call a solving method ({method}) which hasn't been programmed.");
+                throw new Exception(
+                    $"There was an attempt to call a solving method ({method}) which hasn't been programmed.");
             }
             return moveSolved;
         }
@@ -67,8 +75,8 @@ namespace Sudoku.Core
             return Board.IsSolved();
         }
 
-        
         #region Solving Methods
+
         // All these methods must have the exact same name as the corresponding enum in Constants.SolveMethod
         // When coded, make sure to uncomment the matching enum.
 
@@ -82,7 +90,7 @@ namespace Sudoku.Core
             int randCellIndex = Board.RandomCellId() - 1;
             for (int i = randCellIndex; !changed && i < Constants.TotalCellCount + randCellIndex; i++)
             {
-                int cellId = i % Constants.TotalCellCount + 1;
+                int cellId = i%Constants.TotalCellCount + 1;
                 Cell cell = Board.GetCell(cellId);
 
                 if (cell.Value > 0 || !cell.IsSolved())
@@ -108,13 +116,13 @@ namespace Sudoku.Core
 
             for (int i = randomHouseIndex; i < Constants.TotalHouseCount + randomHouseIndex; i++)
             {
-                int houseIndex = i % Constants.TotalHouseCount;
+                int houseIndex = i%Constants.TotalHouseCount;
                 House house = Board.Houses[houseIndex];
 
                 int randomCandidateIndex = rand.Next(Constants.BoardLength);
                 for (int j = randomCandidateIndex; j < Constants.BoardLength + randomCandidateIndex; j++)
                 {
-                    int val = j % Constants.BoardLength + 1;
+                    int val = j%Constants.BoardLength + 1;
 
                     if (house.Contains(val)) continue;
 
@@ -123,9 +131,11 @@ namespace Sudoku.Core
 
                     int randomCellIndex = rand.Next(Constants.BoardLength);
 
-                    for (int k = randomCellIndex; candidateCount < 2 && k < Constants.BoardLength + randomCellIndex; k++)
+                    for (int k = randomCellIndex;
+                        candidateCount < 2 && k < Constants.BoardLength + randomCellIndex;
+                        k++)
                     {
-                        int cellIndex = k % Constants.BoardLength;
+                        int cellIndex = k%Constants.BoardLength;
                         Cell cell = house.Cells[cellIndex];
                         if (cell.Candidates.Contains(val))
                         {
@@ -155,42 +165,44 @@ namespace Sudoku.Core
         /// <returns></returns>
         private bool NakedPair()
         {
-            var rnd = new Random();
-            House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
+            return NakedTuple(2);
 
-            foreach (House house in houseArray)
-            {
+            //Not sure if the following is faster or slower. It's certainly simpler, though.
+            //var rnd = new Random();
+            //House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
 
-                for (int cellIndex = 0; cellIndex < house.Cells.Count - 1; cellIndex++)
-                {
-                    Cell cell = house.Cells[cellIndex];
-                    //Identify first pair
-                    if (cell.Value != 0 || cell.Candidates.Count() != 2) continue;
-                    for (int cell2Index = cellIndex + 1; cell2Index < house.Cells.Count; cell2Index++)
-                    {
-                        Cell cell2 = house.Cells[cell2Index];
-                        //Identify second pair
-                        if (cell2.Value != 0 || !cell.Candidates.Equals(cell2.Candidates)) continue;
-                        int[] candArr = cell.Candidates.GetCandidateArray();
-                        bool changed = false;
-                        foreach (int val in candArr)
-                        {
-                            foreach (Cell cell3 in house.Cells)
-                            {
-                                //Eliminate candidates from other cells in the house
-                                if (!cell.Candidates.Equals(cell3.Candidates))
-                                {
-                                    changed = cell3.Candidates.EliminateCandidate(val) || changed;
-                                }
-                            }
-                        }
-                        // Only return success if a candidate has been eliminated
-                        if (changed) return true;
-                    }
-                }
-            }
+            //foreach (House house in houseArray)
+            //{
+            //    for (int cellIndex = 0; cellIndex < house.Cells.Count - 1; cellIndex++)
+            //    {
+            //        Cell cell = house.Cells[cellIndex];
+            //        //Identify first pair
+            //        if (cell.Value != 0 || cell.Candidates.Count() != 2) continue;
+            //        for (int cell2Index = cellIndex + 1; cell2Index < house.Cells.Count; cell2Index++)
+            //        {
+            //            Cell cell2 = house.Cells[cell2Index];
+            //            //Identify second pair
+            //            if (cell2.Value != 0 || !cell.Candidates.Equals(cell2.Candidates)) continue;
+            //            int[] candArr = cell.Candidates.GetCandidateArray();
+            //            bool changed = false;
+            //            foreach (int val in candArr)
+            //            {
+            //                foreach (Cell cell3 in house.Cells)
+            //                {
+            //                    //Eliminate candidates from other cells in the house
+            //                    if (!cell.Candidates.Equals(cell3.Candidates))
+            //                    {
+            //                        changed = cell3.Candidates.EliminateCandidate(val) || changed;
+            //                    }
+            //                }
+            //            }
+            //            // Only return success if a candidate has been eliminated
+            //            if (changed) return true;
+            //        }
+            //    }
+            //}
 
-            return false;
+            //return false;
         }
 
         /// <summary>
@@ -207,9 +219,8 @@ namespace Sudoku.Core
 
             foreach (House house in houseArray)
             {
-
                 //Get list of candidates ready
-                var candidateList = new List<int>() { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+                var candidateList = new List<int>() {1, 2, 3, 4, 5, 6, 7, 8, 9};
                 foreach (Cell cell in house.Cells)
                 {
                     if (cell.Value > 0)
@@ -273,7 +284,6 @@ namespace Sudoku.Core
 
             foreach (House house in houseArray)
             {
-
                 //Get list of house's unsolved candidates ready
                 var candidateList = new List<int>() {1, 2, 3, 4, 5, 6, 7, 8, 9};
                 foreach (Cell cell in house.Cells)
@@ -341,9 +351,7 @@ namespace Sudoku.Core
                     }
 
                     if (changed) return true;
-
                 }
-
             }
             return false;
         }
@@ -358,18 +366,26 @@ namespace Sudoku.Core
             return NakedTuple(3);
         }
 
-        private bool NakedTuple(int tuple) {
+        private bool NakedQuad()
+        {
+            return NakedTuple(4);
+        }
 
+        #endregion
+
+
+        private bool NakedTuple(int tuple)
+        {
             var rnd = new Random();
 
             bool changed = false;
 
             House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
 
-            foreach (House house in houseArray) {
-                
-                //Get list of house's unsolved candidates ready
-                var candidateList = new List<int>() {1, 2, 3, 4, 5, 6, 7, 8, 9};
+            foreach (House house in houseArray)
+            {
+                //Get list of house's unsolved candidates ready //TODO: Does this really speed up the code appreciably?
+                var candidateList = new List<int>() { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
                 foreach (Cell cell in house.Cells)
                 {
                     if (cell.Value > 0)
@@ -378,65 +394,80 @@ namespace Sudoku.Core
                     }
                 }
 
-                // If the house has less than [tuple + 1] unsolved candidates, this method is of no use
-                if (candidateList.Count < (tuple + 1)) continue;
+                // If the house has <= [tuple] candidates, there aren't any values left to rule out
+                if (candidateList.Count <= tuple) continue;
 
                 //Get random-order list of all cells with multiple but at most [tuple] candidates
-                
                 List<Cell> cellList = (from cell in house.Cells
                                        let count = cell.Candidates.Count()
                                        where count > 1 && count <= tuple
                                        select cell
-                                       ).OrderBy(x => rnd.Next()).ToList();
+                    ).OrderBy(x => rnd.Next()).ToList();
 
                 //If there are less than [tuple] cells in this list, this method is of no use
                 if (cellList.Count < tuple) continue;
 
                 // For each combination of three cells in this list, look for a set with only three unique candidates between them
-                //TODO
+
                 //create an array of cell indexes {0, 1, 2...}
                 int[] indexes = Enumerable.Range(0, tuple).ToArray();
-                //create a pointer
-                int pointer = indexes.Length - 1;
 
+
+                int pointer = indexes.Length - 1;
                 while (indexes[tuple - 1] < cellList.Count)
                 {
-                    ISet<int> candidates = new SortedSet<int>();
+                    ISet<int> candidateSet = new SortedSet<int>();
                     foreach (int index in indexes)
                     {
                         foreach (int cand in candidateList)
                         {
                             if (cellList[index].Candidates.Contains(cand))
                             {
-                                candidates.Add(cand);
+                                candidateSet.Add(cand);
                             }
                         }
                     }
-                    if (candidates.Count == tuple) //success
+                    if (candidateSet.Count == tuple) // Success! Remove these candidates from all other cells in house
                     {
-                        //TODO remove these candidates from all other cells in house
-                    }
-                    else //check a different combination of cells in the list
-                    {
-                        //TODO increment the proper cell indexes
-                        /*
-                         * increment the last index
-                         * while the last index is too high and two neighboring indexes have a difference > 1, 
-                         *  find the last cell that isn't one lower than the one after it
-                         *  increment that cell, and fill all the others after it
-                         * if no change is made, the set is ruled out
-                         */
-                        indexes[tuple - 1]++;
-                        while (indexes[tuple - 1] >= cellList.Count
-                               && LastNonConsecutiveIndex(indexes) != -1)
+                        //trim these three cells from cell list
+                        for (int i = indexes.Length - 1; i >= 0; i--)
                         {
-                            //TODO
+                            cellList.RemoveAt(indexes[i]);
+                        }
+                        //for each cell in the list, remove each candidate in the set
+                        foreach (Cell cell in cellList)
+                        {
+                            foreach (int val in candidateSet)
+                            {
+                                changed = cell.Candidates.EliminateCandidate(val) || changed;
+                            }
+                        }
+                        if (changed) return true;
+                    }
+
+                    // Change the indexes so the next loop will check a different combination of cells
+                    /*
+                        * increment the last index
+                        * while the last index is too high and two neighboring indexes have a difference > 1, 
+                        *  find the last cell that is over one lower than the one after it
+                        *  increment that cell, and fill all the others after it
+                        * if no change is made, the set is ruled out
+                        */
+                    indexes[tuple - 1]++;
+                    while (indexes[tuple - 1] >= cellList.Count && pointer >= 0)
+                    {
+                        pointer = LastNonConsecutiveIndex(indexes);
+                        if (pointer >= 0)
+                        {
+                            //increment appropriate indexes
+                            indexes[pointer]++;
+                            for (int i = pointer + 1; i < indexes.Length; i++)
+                            {
+                                indexes[i] = indexes[pointer] + (i - pointer);
+                            }
                         }
                     }
-                } 
-
-                
-
+                }
             }
 
             return false;
@@ -448,20 +479,15 @@ namespace Sudoku.Core
         /// </summary>
         /// <param name="arr"></param>
         /// <returns></returns>
-        private static int LastNonConsecutiveIndex(IReadOnlyList<int> arr)
+        public static int LastNonConsecutiveIndex(IReadOnlyList<int> arr)
         {
             if (arr.Count < 2) return -2;
             for (int i = arr.Count - 2; i >= 0; i--)
             {
-                if (arr[i+1]-(i+1) != arr[i] - (i)) return i;
+                if (arr[i + 1] - (i + 1) != arr[i] - (i)) return i;
             }
             return -1;
         }
-
-        #endregion
-
-
-
 
     }
 }

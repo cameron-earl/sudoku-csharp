@@ -23,7 +23,7 @@ namespace Sudoku.Core
             IntersectionRemoval, // All of a certain candidate in a house share another house, eliminating them from the other cells in the second house
             NakedTriple, // Three cells in the same house have only three candidates between them, eliminating those candidates from the rest of the house
             //HiddenTriple, // Three candidates can only be found in three cells of the same house, eliminating all other candidates in those three cells
-            //NakedQuad, // Four cells in the same house have only four candidates between them, eliminating those candidates from the rest of the house
+            NakedQuad, // Four cells in the same house have only four candidates between them, eliminating those candidates from the rest of the house
             //HiddenQuad, // Four candidates can only be found in four cells of the same house, eliminating all other candidates in those three cells
             //XWing,
             //SimpleColoring,

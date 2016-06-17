@@ -202,7 +202,17 @@ namespace Sudoku.Core
             box.UpdateCandidates(newValue);
         }
 
+        public House[] GetShuffledCopyOfHouseArray()
+        {
+            return GetShuffledCopyOfHouseArray(new Random());
+        }
 
+        public House[] GetShuffledCopyOfHouseArray(Random rnd)
+        {
+            var randomArray = new House[Houses.Length];
+            Array.Copy(Houses, randomArray, Houses.Length);
+            return randomArray.OrderBy(x => rnd.Next()).ToArray();
+        }
     }
     
 }

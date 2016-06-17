@@ -9,8 +9,8 @@ namespace Sudoku.ConsoleApp
     {
 
         private ConsoleColor _labelColor = ConsoleColor.DarkGray;
-        private ConsoleColor _boldFrameColor = ConsoleColor.Black;
-        private ConsoleColor _minorFrameColor = ConsoleColor.Black;
+        private ConsoleColor _boldFrameColor = ConsoleColor.Gray;
+        private ConsoleColor _minorFrameColor = ConsoleColor.DarkGray;
         private ConsoleColor _providedValueColor = ConsoleColor.White;
         private ConsoleColor _playerInputColor = ConsoleColor.Gray;
         private ConsoleColor _solvedValueColor = ConsoleColor.Green;
@@ -140,7 +140,6 @@ namespace Sudoku.ConsoleApp
                             PrintAllCells();
                         }
                         if (!Board.IsSolved()) PrintUnsolvableMessage();
-                        //if (!Solver.SolvePuzzle()) PrintUnsolvableMessage();
                         break;
                     case 'd':
                         DisplayCandidatesForBoard();

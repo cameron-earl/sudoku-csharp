@@ -47,36 +47,13 @@ namespace Sudoku.Core
             bool moveSolved;
             try
             {   
-                string methodName = method.ToString();
-                //TODO "theMethod" is never set, always null.
-                MethodInfo theMethod = GetType().GetMethod(methodName, BindingFlags.NonPublic);
-                Console.WriteLine(method);
+                MethodInfo theMethod = GetType().GetMethod($"{method}", BindingFlags.NonPublic | BindingFlags.Instance);
                 moveSolved = (bool) theMethod.Invoke(this, null);
             }
             catch (Exception)
             {
-                throw;
+                throw new Exception($"There was an attempt to call a solving method ({method}) which hasn't been programmed.");
             }
-            //switch (method)
-            //{
-            //    case Constants.SolveMethod.NakedSingle:
-            //        moveSolved = NakedSingle();
-            //        break;
-            //    case Constants.SolveMethod.HiddenSingle:
-            //        moveSolved = HiddenSingle();
-            //        break;
-            //    case Constants.SolveMethod.NakedPair:
-            //        moveSolved = NakedPair();
-            //        break;
-            //    case Constants.SolveMethod.HiddenPair:
-            //        moveSolved = HiddenPair();
-            //        break;
-            //    case Constants.SolveMethod.IntersectionRemoval:
-            //        moveSolved = IntersectionRemoval();
-            //        break;
-            //    default:
-            //        throw new Exception("Something went wrong. Update Solver.SolveOneMove.switch cases");
-            //}
             return moveSolved;
         }
 
@@ -90,7 +67,11 @@ namespace Sudoku.Core
             return Board.IsSolved();
         }
 
+        
         #region Solving Methods
+        // All these methods must have the exact same name as the corresponding enum in Constants.SolveMethod
+        // When coded, make sure to uncomment the matching enum.
+
         /// <summary>
         /// Starting with a random cell, solve the first cell with only one candidate.
         /// </summary>
@@ -174,14 +155,11 @@ namespace Sudoku.Core
         /// <returns></returns>
         private bool NakedPair()
         {
+            var rnd = new Random();
+            House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
 
-            var rand = new Random();
-            int randomHouseIndex = rand.Next(27);
-
-            for (int i = randomHouseIndex; i < Constants.TotalHouseCount + randomHouseIndex; i++)
+            foreach (House house in houseArray)
             {
-                int houseIndex = i % Constants.TotalHouseCount;
-                House house = Board.Houses[houseIndex];
 
                 for (int cellIndex = 0; cellIndex < house.Cells.Count - 1; cellIndex++)
                 {
@@ -222,16 +200,13 @@ namespace Sudoku.Core
         /// <returns></returns>
         private bool HiddenPair()
         {
-            //TODO seems to work but isn't fully tested
             bool changed = false;
 
-            var rand = new Random();
-            int randomHouseIndex = rand.Next(27);
+            var rnd = new Random();
+            House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
 
-            for (int i = randomHouseIndex; i < Constants.TotalHouseCount + randomHouseIndex; i++)
+            foreach (House house in houseArray)
             {
-                int houseIndex = i % Constants.TotalHouseCount;
-                House house = Board.Houses[houseIndex];
 
                 //Get list of candidates ready
                 var candidateList = new List<int>() { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
@@ -293,13 +268,11 @@ namespace Sudoku.Core
         {
             bool changed = false;
 
-            var rand = new Random();
-            int randomHouseIndex = rand.Next(27);
+            var rnd = new Random();
+            House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
 
-            for (int i = randomHouseIndex; i < Constants.TotalHouseCount + randomHouseIndex; i++)
+            foreach (House house in houseArray)
             {
-                int houseIndex = i%Constants.TotalHouseCount;
-                House house = Board.Houses[houseIndex];
 
                 //Get list of house's unsolved candidates ready
                 var candidateList = new List<int>() {1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -373,6 +346,116 @@ namespace Sudoku.Core
 
             }
             return false;
+        }
+
+        /// <summary>
+        /// Starting with a random house, find three cells with the same three candidates between them. Remove the candidates from
+        /// all other cells in the house.
+        /// </summary>
+        /// <returns></returns>
+        private bool NakedTriple()
+        {
+            return NakedTuple(3);
+        }
+
+        private bool NakedTuple(int tuple) {
+
+            var rnd = new Random();
+
+            bool changed = false;
+
+            House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
+
+            foreach (House house in houseArray) {
+                
+                //Get list of house's unsolved candidates ready
+                var candidateList = new List<int>() {1, 2, 3, 4, 5, 6, 7, 8, 9};
+                foreach (Cell cell in house.Cells)
+                {
+                    if (cell.Value > 0)
+                    {
+                        candidateList.Remove(cell.Value);
+                    }
+                }
+
+                // If the house has less than [tuple + 1] unsolved candidates, this method is of no use
+                if (candidateList.Count < (tuple + 1)) continue;
+
+                //Get random-order list of all cells with multiple but at most [tuple] candidates
+                
+                List<Cell> cellList = (from cell in house.Cells
+                                       let count = cell.Candidates.Count()
+                                       where count > 1 && count <= tuple
+                                       select cell
+                                       ).OrderBy(x => rnd.Next()).ToList();
+
+                //If there are less than [tuple] cells in this list, this method is of no use
+                if (cellList.Count < tuple) continue;
+
+                // For each combination of three cells in this list, look for a set with only three unique candidates between them
+                //TODO
+                //create an array of cell indexes {0, 1, 2...}
+                int[] indexes = Enumerable.Range(0, tuple).ToArray();
+                //create a pointer
+                int pointer = indexes.Length - 1;
+
+                while (indexes[tuple - 1] < cellList.Count)
+                {
+                    ISet<int> candidates = new SortedSet<int>();
+                    foreach (int index in indexes)
+                    {
+                        foreach (int cand in candidateList)
+                        {
+                            if (cellList[index].Candidates.Contains(cand))
+                            {
+                                candidates.Add(cand);
+                            }
+                        }
+                    }
+                    if (candidates.Count == tuple) //success
+                    {
+                        //TODO remove these candidates from all other cells in house
+                    }
+                    else //check a different combination of cells in the list
+                    {
+                        //TODO increment the proper cell indexes
+                        /*
+                         * increment the last index
+                         * while the last index is too high and two neighboring indexes have a difference > 1, 
+                         *  find the last cell that isn't one lower than the one after it
+                         *  increment that cell, and fill all the others after it
+                         * if no change is made, the set is ruled out
+                         */
+                        indexes[tuple - 1]++;
+                        while (indexes[tuple - 1] >= cellList.Count
+                               && LastNonConsecutiveIndex(indexes) != -1)
+                        {
+                            //TODO
+                        }
+                    }
+                } 
+
+                
+
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Returns the last index that is at least two apart from the one after it
+        /// Returns -1 if no such index exists (or the pattern for the whole array is arr[i+1} = arr[i]+1)
+        /// </summary>
+        /// <param name="arr"></param>
+        /// <returns></returns>
+        private static int LastNonConsecutiveIndex(IReadOnlyList<int> arr)
+        {
+            if (arr.Count < 2) return -2;
+            for (int i = arr.Count - 2; i >= 0; i--)
+            {
+                if (arr[i+1]-(i+1) != arr[i] - (i)) return i;
+            }
+            return -1;
         }
 
         #endregion

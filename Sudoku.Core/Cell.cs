@@ -2,7 +2,7 @@ using System;
 
 namespace Sudoku.Core
 {
-    public class Cell
+    public class Cell : IObservable<int>
     {
         private int _value;
 
@@ -41,6 +41,7 @@ namespace Sudoku.Core
                     throw new ArgumentOutOfRangeException($"Cell value must be 0-{Constants.BoardLength}.");
                 }
                 Candidates.SolvedValue = value;
+                HasChanged = true;
                 _value = value;
             }
         }
@@ -51,14 +52,12 @@ namespace Sudoku.Core
 
         public int BoxNumber { get; private set; }
 
-        public CandidateSet Candidates { get; private set; }
+        public CandidateSet Candidates { get; }
 
         public Constants.SolveMethod SolveMethod { get; set; } = Constants.SolveMethod.Unsolved;
 
-        public bool IsSolved()
-        {
-            return (Candidates.SolvedValue > 0);
-        }
+        public bool HasChanged { get; set; } = true; // todo Should be removed as soon as observer pattern is set up
+
         #endregion
 
         #region Methods
@@ -92,11 +91,20 @@ namespace Sudoku.Core
             }
         }
 
+        public IDisposable Subscribe(IObserver<int> observer)
+        {
+            throw new NotImplementedException();
+        }
+
         public override string ToString()
         {
             return (Value > 0) ? $"{Value}" : " ";
         }
 
+        public bool IsSolved()
+        {
+            return (Candidates.SolvedValue > 0);
+        }
 
         #endregion
 
@@ -127,6 +135,12 @@ namespace Sudoku.Core
             row--;
             col--;
             return row*9 + col + 1;
+        }
+
+        public bool CouldBe(int val)
+        {
+            if (Value == val) return true;
+            return val != 0 && Candidates.Contains(val);
         }
     }
 }

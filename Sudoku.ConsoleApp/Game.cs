@@ -15,7 +15,7 @@ namespace Sudoku.ConsoleApp
         private ConsoleColor _providedValueColor = ConsoleColor.White;
         private ConsoleColor _playerInputColor = ConsoleColor.Gray;
         private ConsoleColor _solvedValueColor = ConsoleColor.Green;
-        internal const int ConsoleWindowHeight = 30;
+        internal const int ConsoleWindowHeight = 33;
         internal const int MenuPosition = 20;
 
         public Game(Board board)
@@ -76,28 +76,35 @@ namespace Sudoku.ConsoleApp
         {
             for (int cell = 1; cell <= Constants.TotalCellCount; cell++)
             {
-                SetCursorPosition(CursorColForCell(cell), CursorRowForCell(cell));
-                PrintCell(cell);
+                if (Board.Cells[cell - 1].HasChanged)
+                {
+                    PrintCell(cell);
+                    Board.Cells[cell - 1].HasChanged = false;
+                }
+                
             }
             ResetColor();
         }
 
         public void PrintCell(int cellId)
         {
-            var cell = Board.Cells[cellId - 1];
-            var solveMethod = cell.SolveMethod;
-            if (solveMethod == Constants.SolveMethod.Provided)
+            Cell cell = Board.GetCell(cellId);
+            SetCursorPosition(CursorColForCell(cellId), CursorRowForCell(cellId));
+            Constants.SolveMethod solveMethod = cell.SolveMethod;
+            switch (solveMethod)
             {
-                ForegroundColor = _providedValueColor;
-            } else if (solveMethod == Constants.SolveMethod.PlayerInput)
-            {
-                ForegroundColor = _playerInputColor;
-            } else if (solveMethod == Constants.SolveMethod.NakedSingle)
-            {
-                ForegroundColor = ConsoleColor.DarkYellow;
-            } else // Unlisted solve method
-            {
-                ForegroundColor = _solvedValueColor;
+                case Constants.SolveMethod.Provided:
+                    ForegroundColor = _providedValueColor;
+                    break;
+                case Constants.SolveMethod.PlayerInput:
+                    ForegroundColor = _playerInputColor;
+                    break;
+                case Constants.SolveMethod.NakedSingle:
+                    ForegroundColor = ConsoleColor.DarkYellow;
+                    break;
+                default:
+                    ForegroundColor = _solvedValueColor;
+                    break;
             }
             Write(cell);
 
@@ -143,7 +150,7 @@ namespace Sudoku.ConsoleApp
                         if (!Board.IsSolved()) PrintUnsolvableMessage();
                         break;
                     case 'd':
-                        DisplayCandidatesForBoard();
+                        PrintCandidatesForBoard();
                         break;
                     case 'e':
                         WriteLine(Board.IsValid());
@@ -161,7 +168,7 @@ namespace Sudoku.ConsoleApp
             if (Board.IsSolved()) PrintMessage($"Congratulations! Sudoku solved!\n{Solver.MoveCountsToString()}{Board.ToSimpleString()}");
         }
 
-        private void DisplayCandidatesForBoard()
+        private void PrintCandidatesForBoard()
         {
             PrintMessage(Board.CandidatesToString());
         }

@@ -25,7 +25,7 @@ namespace Sudoku.Core
             //HiddenTriple, // Three candidates can only be found in three cells of the same house, eliminating all other candidates in those three cells
             NakedQuad, // Four cells in the same house have only four candidates between them, eliminating those candidates from the rest of the house
             //HiddenQuad, // Four candidates can only be found in four cells of the same house, eliminating all other candidates in those three cells
-            //XWing,
+            XWing, // For a certain candidate, pick two lines (base sets) in which all the candidate is in the same two opposing lines (cover sets). Remove candidate from all other cells in the cover sets.
             //SimpleColoring,
             //YWing,
             //SwordFish,

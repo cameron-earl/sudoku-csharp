@@ -110,7 +110,7 @@ namespace Sudoku.Core
                             candidateStr += $"{val}";
                         }
                     }
-                    candidateStr += $")[{candidates.Count()}] ";
+                    candidateStr += ") ";
                 }
                 candidateStr += '\n';
             }
@@ -144,28 +144,6 @@ namespace Sudoku.Core
             return (Cells[cellId - 1]);
         }
 
-        #endregion 
-
-        #region Static Methods
-
-        private static int[] ConvertStringParameter(string valueString)
-        {
-            var charValues = valueString.ToCharArray();
-            var intValues = new int[Constants.TotalCellCount];
-            for (var i = 0; i < Constants.TotalCellCount; i++)
-            {
-                intValues[i] = (int)char.GetNumericValue(charValues[i]);
-            }
-            return intValues;
-        }
-
-        public static int RandomCellId()
-        {
-            return new Random().Next(81) + 1;
-        }
-
-        #endregion
-
         public void SetCellValue(int cellId, int newValue, Constants.SolveMethod solveMethod)
         {
             Cell cell = GetCell(cellId);
@@ -178,7 +156,7 @@ namespace Sudoku.Core
             {
                 throw new Exception("Tried to change a provided value");
             }
-            if (cell.Value > 0 && (solveMethod != Constants.SolveMethod.PlayerInput 
+            if (cell.Value > 0 && (solveMethod != Constants.SolveMethod.PlayerInput
                 || (solveMethod == Constants.SolveMethod.PlayerInput && cell.SolveMethod != Constants.SolveMethod.PlayerInput)))
             {
                 throw new Exception("Tried to change solved value");
@@ -211,6 +189,55 @@ namespace Sudoku.Core
             Array.Copy(Houses, randomArray, Houses.Length);
             return randomArray.OrderBy(x => rnd.Next()).ToArray();
         }
+
+        public bool IsValueSolved(int val)
+        {
+            if (val < 1 || val > Constants.BoardLength)
+            {
+                return false;
+            }
+
+            return Rows.All(row => row.Contains(val));
+        }
+
+        public House GetHouse(House.HouseType houseType, int index)
+        {
+            switch (houseType)
+            {
+                case House.HouseType.Row:
+                    return Rows[index];
+                case House.HouseType.Column:
+                    return Columns[index];
+                case House.HouseType.Box:
+                    return Boxes[index];
+                default:
+                    throw new Exception("What the what?");
+            }
+        }
+
+        #endregion 
+
+        #region Static Methods
+
+        private static int[] ConvertStringParameter(string valueString)
+        {
+            var charValues = valueString.ToCharArray();
+            var intValues = new int[Constants.TotalCellCount];
+            for (var i = 0; i < Constants.TotalCellCount; i++)
+            {
+                intValues[i] = (int)char.GetNumericValue(charValues[i]);
+            }
+            return intValues;
+        }
+
+        public static int RandomCellId()
+        {
+            return new Random().Next(81) + 1;
+        }
+
+        #endregion
+
+
     }
     
 }

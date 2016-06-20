@@ -7,6 +7,8 @@
         {
             HouseNumber = houseNumber;
         }
+        
+        public override HouseType MyHouseType { get; } = HouseType.Column;
 
         public override string ToString()
         {

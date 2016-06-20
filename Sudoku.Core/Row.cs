@@ -8,6 +8,9 @@
             HouseNumber = houseNumber;
         }
 
+
+        public override HouseType MyHouseType { get; } = HouseType.Row;
+
         public override string ToString()
         {
             var rowString = "";

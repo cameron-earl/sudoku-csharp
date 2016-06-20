@@ -4,14 +4,20 @@ using System.Linq;
 
 namespace Sudoku.Core
 {
-    public abstract class House
+    public abstract class House : IComparable
     {
-        
+        public enum HouseType
+        {
+            Row,
+            Column,
+            Box
+        }
+
+        public abstract HouseType MyHouseType { get; }
  
         public IList<Cell> Cells { get; set; } = new List<Cell>();
         public int HouseNumber { get; set; }
-
-
+        
         public void Add(Cell cell)
         {
             if (Cells.Contains(cell)) return;
@@ -50,6 +56,12 @@ namespace Sudoku.Core
 
         public abstract override string ToString();
 
+        public int CompareTo(object obj)
+        {
+            var otherHouse = (House) obj;
+            return HouseNumber.CompareTo(otherHouse.HouseNumber);
+        }
+
         public bool IsValid()
         {
             for (int i = 0; i < Constants.BoardLength - 1; i++)
@@ -83,6 +95,17 @@ namespace Sudoku.Core
         public bool Contains(int val)
         {
             return Cells.Any(cell => cell.Value == val);
+        }
+
+        public int CountCellsWithCandidate(int val)
+        {
+            int count = 0;
+            foreach (Cell cell in Cells)
+            {
+                if (cell.CouldBe(val)) count++;
+            }
+            return count;
+            //return Contains(val) ? 1 : Cells.Count(cell => cell.CouldBe(val));
         }
     }
 }

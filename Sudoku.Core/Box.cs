@@ -8,6 +8,8 @@
             HouseNumber = houseNumber;
         }
 
+        public override HouseType MyHouseType { get; } = HouseType.Box;
+
         public override string ToString()
         {
             int houseIndex = HouseNumber - 1;

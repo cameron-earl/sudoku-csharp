@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 
@@ -75,10 +76,11 @@ namespace Sudoku.Core
             return Board.IsSolved();
         }
 
-        #region Solving Methods
+        #region Named Solving Methods
 
         // All these methods must have the exact same name as the corresponding enum in Constants.SolveMethod
         // When coded, make sure to uncomment the matching enum.
+        // ReSharper disable UnusedMember.Local
 
         /// <summary>
         /// Starting with a random cell, solve the first cell with only one candidate.
@@ -371,9 +373,25 @@ namespace Sudoku.Core
             return NakedTuple(4);
         }
 
+        private bool XWing()
+        {
+            return BasicFish(2);
+        }
+
+        private bool SwordFish()
+        {
+            return BasicFish(3);
+        }
+
+        private bool JellyFish()
+        {
+            return BasicFish(4);
+        }
+
         #endregion
 
 
+        #region Helper Methods
         private bool NakedTuple(int tuple)
         {
             var rnd = new Random();
@@ -472,6 +490,158 @@ namespace Sudoku.Core
 
             return false;
         }
+
+        /// <summary>
+        /// Starting with a random unsolved candidate, find x lines (base set) 
+        /// wherein it appears only within the same x (or less) opposing lines 
+        /// (cover set). Remove candidate from all other cells in cover set. 
+        /// </summary>
+        /// <param name="lineCount"></param>
+        /// <returns></returns>
+        private bool BasicFish(int lineCount)
+        {
+            //Start with a random candidate
+            int randomValIndex = new Random().Next(9);
+            for (int i = randomValIndex; i < 9 + randomValIndex; i++)
+            {
+                int val = i % 9 + 1;
+                if (Board.IsValueSolved(val)) continue;
+
+                //Generate lists of rows and cols in which the candidate appears between 2 and x times
+                //There must be at least x lines in both the base and cover sets
+                if (val == 5)
+                    Console.WriteLine();
+                IList<House> rows = (from row in Board.Rows
+                                     let count = row.CountCellsWithCandidate(val)
+                                     where (count > 1 && count <= lineCount)
+                                     select row)
+                                     .ToList();
+                if (rows.Count < lineCount) continue;
+
+
+                IList<House> cols = (from col in Board.Columns
+                                     let count = col.CountCellsWithCandidate(val)
+                                     where (count > 1 && count <= lineCount)
+                                     select col)
+                                     .ToList();
+                if (cols.Count < lineCount) continue;
+
+
+                if (FindBasicFish(val, lineCount, rows)) return true; // todo make random
+                if (FindBasicFish(val, lineCount, cols)) return true;
+
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Will search given lines and check each combination for a basic fish of given lineCount
+        /// </summary>
+        /// <param name="val"></param>
+        /// <param name="lineCount"></param>
+        /// <param name="lines"></param>
+        /// <returns></returns>
+        private bool FindBasicFish(int val, int lineCount, IList<House> lines)
+        {
+            var eliminated = new bool[lines.Count];
+
+            while (true)
+            {
+                // This loop handles changing earlier lines and exiting with failure
+                //While there aren't enough lines left
+                while (lines.Count - eliminated.Where(c => c).Count() < lineCount)
+                {
+                    // make the last 0 value 1, everything after = 0
+                    int lastIndex = -1;
+                    for (int i = eliminated.Length - 1; lastIndex == -1 && i >= 0; i--)
+                    {
+                        lastIndex = (!eliminated[i]) ? i : lastIndex;
+                    }
+                    if (lastIndex == -1)
+                        return false; //failure!
+                    eliminated[lastIndex] = true;
+                    for (int i = lastIndex + 1; i < eliminated.Length; i++)
+                    {
+                        eliminated[i] = false;
+                    }
+                }
+
+                //This loop handles changing the last line and exiting with success
+                while (!eliminated[eliminated.Length - 1])
+                {
+                    //get the first x lines that aren't eliminated
+                    IList<House> chosenLines = new List<House>();
+                    int lastIndex = 0;
+                    for (int i = 0; chosenLines.Count < lineCount && i < eliminated.Length; i++)
+                    {
+                        if (!eliminated[i])
+                        {
+                            chosenLines.Add(lines[i]);
+                        }
+                        lastIndex = i;
+                    }
+                    //send to check function, return true if change made
+                    if (CheckForNewFish(val, chosenLines))
+                        return true;
+
+                    //eliminate former xth line
+                    eliminated[lastIndex] = true;
+                }
+
+            }
+        }
+
+        /// <summary>
+        /// Checks a certain combination of lines for a new fish (of that many lines)
+        /// </summary>
+        /// <param name="val"></param>
+        /// <param name="chosenLines"></param>
+        /// <returns></returns>
+        private bool CheckForNewFish(int val, IList<House> chosenLines)
+        {
+            int len = chosenLines.Count;
+            bool change = false;
+            // gather indexes of each cell with val as candidate for each line
+            var coverSet = new SortedSet<int>();
+            foreach (House line in chosenLines)
+            {
+                if (line.Contains(val))
+                    return false;
+                for (int i = 0; i < line.Cells.Count; i++)
+                {
+                    if (line.Cells[i].CouldBe(val))
+                    {
+                        coverSet.Add(i + 1);
+                        if (coverSet.Count > len) return false;
+                    }
+                }
+            }
+            // if count of indexes < count of lines, throw exception
+            if (coverSet.Count < len) throw new Exception("What the what?");
+
+            // otherwise gather cells in coverset (but not base set) into new list
+            House.HouseType baseType = chosenLines[0].MyHouseType;
+            House.HouseType coverType = (baseType == House.HouseType.Column) ? House.HouseType.Row : House.HouseType.Column;
+            List<Cell> baseCells = chosenLines.SelectMany(line => line.Cells).ToList();
+            List<Cell> coverCells = (from i in coverSet
+                                     select Board.GetHouse(coverType, i - 1)
+                                        into line
+                                     from cell
+                                     in line.Cells
+                                     where !baseCells.Contains(cell)
+                                     select cell)
+                                    .ToList();
+            // and eliminate that candidate from each cell in the list
+            foreach (Cell cell in coverCells)
+            {
+                change = cell.Candidates.EliminateCandidate(val) || change;
+            }
+            // return whether change was made
+            return change;
+        }
+        #endregion
+
 
         /// <summary>
         /// Returns the last index that is at least two apart from the one after it

@@ -2,7 +2,7 @@ using System;
 
 namespace Sudoku.Core
 {
-    public class Cell : IObservable<int>
+    public class Cell : IObservable<int>, IComparable
     {
         private int _value;
 
@@ -89,6 +89,12 @@ namespace Sudoku.Core
                 else if (ColumnNumber <= 6) BoxNumber = 8;
                 else BoxNumber = 9;
             }
+        }
+
+        public int CompareTo(object obj)
+        {
+            var otherCell = (Cell)obj;
+            return CellId.CompareTo(otherCell.CellId);
         }
 
         public IDisposable Subscribe(IObserver<int> observer)

@@ -61,7 +61,7 @@ namespace Sudoku.Core
             catch (Exception)
             {
                 throw new Exception(
-                    $"There was an attempt to call a solving method ({method}) which hasn't been programmed.");
+                    $"There was an attempt to call a solving method ({method}) which hasn't yet been programmed.");
             }
             return moveSolved;
         }
@@ -168,43 +168,6 @@ namespace Sudoku.Core
         private bool NakedPair()
         {
             return NakedTuple(2);
-
-            //Not sure if the following is faster or slower. It's certainly simpler, though.
-            //var rnd = new Random();
-            //House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
-
-            //foreach (House house in houseArray)
-            //{
-            //    for (int cellIndex = 0; cellIndex < house.Cells.Count - 1; cellIndex++)
-            //    {
-            //        Cell cell = house.Cells[cellIndex];
-            //        //Identify first pair
-            //        if (cell.Value != 0 || cell.Candidates.Count() != 2) continue;
-            //        for (int cell2Index = cellIndex + 1; cell2Index < house.Cells.Count; cell2Index++)
-            //        {
-            //            Cell cell2 = house.Cells[cell2Index];
-            //            //Identify second pair
-            //            if (cell2.Value != 0 || !cell.Candidates.Equals(cell2.Candidates)) continue;
-            //            int[] candArr = cell.Candidates.GetCandidateArray();
-            //            bool changed = false;
-            //            foreach (int val in candArr)
-            //            {
-            //                foreach (Cell cell3 in house.Cells)
-            //                {
-            //                    //Eliminate candidates from other cells in the house
-            //                    if (!cell.Candidates.Equals(cell3.Candidates))
-            //                    {
-            //                        changed = cell3.Candidates.EliminateCandidate(val) || changed;
-            //                    }
-            //                }
-            //            }
-            //            // Only return success if a candidate has been eliminated
-            //            if (changed) return true;
-            //        }
-            //    }
-            //}
-
-            //return false;
         }
 
         /// <summary>
@@ -214,62 +177,7 @@ namespace Sudoku.Core
         /// <returns></returns>
         private bool HiddenPair()
         {
-            bool changed = false;
-
-            var rnd = new Random();
-            House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
-
-            foreach (House house in houseArray)
-            {
-                //Get list of candidates ready
-                var candidateList = new List<int>() {1, 2, 3, 4, 5, 6, 7, 8, 9};
-                foreach (Cell cell in house.Cells)
-                {
-                    if (cell.Value > 0)
-                    {
-                        candidateList.Remove(cell.Value);
-                    }
-                }
-                if (candidateList.Count < 3) continue;
-
-                //check each combination of those remaining candidates
-                for (int valueIndex1 = 0; valueIndex1 < candidateList.Count - 1; valueIndex1++)
-                {
-                    int val1 = candidateList[valueIndex1];
-                    Cell[] cellsWithFirstCandidate = CellsWithThisCandidateArray(house.Cells, val1);
-                    if (cellsWithFirstCandidate.Length != 2) continue;
-                    //We now have a list of the only two cells in the house with the first candidate
-
-                    for (int valueIndex2 = valueIndex1 + 1; valueIndex2 < candidateList.Count; valueIndex2++)
-                    {
-                        int val2 = candidateList[valueIndex2];
-                        Cell[] cellsWithSecondCandidate = CellsWithThisCandidateArray(house.Cells, val2);
-                        if (cellsWithSecondCandidate.Length != 2) continue;
-
-                        if (!cellsWithFirstCandidate.Contains(cellsWithSecondCandidate[0])
-                            || !cellsWithFirstCandidate.Contains(cellsWithSecondCandidate[1]))
-                        {
-                            continue;
-                        }
-                        //At this point, we found a match: Two values that are only found as candidates for these two cells in the house
-
-                        foreach (Cell cell in cellsWithSecondCandidate)
-                        {
-                            for (int val = 1; val <= Constants.BoardLength; val++)
-                            {
-                                if (val != val1 && val != val2)
-                                {
-                                    changed = cell.Candidates.EliminateCandidate(val) || changed;
-                                }
-                            }
-                        }
-
-                        if (changed) return true;
-                    }
-                }
-            }
-
-            return false;
+            return HiddenTuple(2);
         }
 
         /// <summary>
@@ -388,9 +296,19 @@ namespace Sudoku.Core
             return BasicFish(4);
         }
 
+        private bool HiddenTriple()
+        {
+            return HiddenTuple(3);
+        }
+
+        private bool HiddenQuad()
+        {
+            return HiddenTuple(4);
+        }
+
         #endregion
 
-
+        //The following methods are generalizations of a type of a group of methods above.
         #region Helper Methods
         private bool NakedTuple(int tuple)
         {
@@ -402,13 +320,13 @@ namespace Sudoku.Core
 
             foreach (House house in houseArray)
             {
-                //Get list of house's unsolved candidates ready //TODO: Does this really speed up the code appreciably?
-                var candidateList = new List<int>() { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-                foreach (Cell cell in house.Cells)
+                //Get list of house's unsolved candidates ready
+                var candidateList = new List<int>();
+                for (int val = 1; val <= Constants.BoardLength; val++)
                 {
-                    if (cell.Value > 0)
+                    if (!house.Contains(val))
                     {
-                        candidateList.Remove(cell.Value);
+                        candidateList.Add(val);
                     }
                 }
 
@@ -429,10 +347,8 @@ namespace Sudoku.Core
 
                 //create an array of cell indexes {0, 1, 2...}
                 int[] indexes = Enumerable.Range(0, tuple).ToArray();
-
-
-                int pointer = indexes.Length - 1;
-                while (indexes[tuple - 1] < cellList.Count)
+                
+                while (indexes[indexes.Length - 1] > 0)
                 {
                     ISet<int> candidateSet = new SortedSet<int>();
                     foreach (int index in indexes)
@@ -463,29 +379,74 @@ namespace Sudoku.Core
                         if (changed) return true;
                     }
 
-                    // Change the indexes so the next loop will check a different combination of cells
-                    /*
-                        * increment the last index
-                        * while the last index is too high and two neighboring indexes have a difference > 1, 
-                        *  find the last cell that is over one lower than the one after it
-                        *  increment that cell, and fill all the others after it
-                        * if no change is made, the set is ruled out
-                        */
-                    indexes[tuple - 1]++;
-                    while (indexes[tuple - 1] >= cellList.Count && pointer >= 0)
+                    indexes = GetNextCombination(indexes, cellList.Count);
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// x candidates can only be found in x cells of the same house, eliminating all other candidates in those x cells
+        /// </summary>
+        /// <param name="tuple"></param>
+        /// <returns></returns>
+        private bool HiddenTuple(int tuple)
+        {
+            var rnd = new Random();
+            House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
+
+            foreach (House house in houseArray)
+            {
+                //Get list of candidates ready
+                var candidateList = new List<int>();
+                for (int val = 1; val <= Constants.BoardLength; val++)
+                {
+                    if (!house.Contains(val) && house.CountCellsWithCandidate(val) <= tuple)
                     {
-                        pointer = LastNonConsecutiveIndex(indexes);
-                        if (pointer >= 0)
+                        candidateList.Add(val);
+                    }
+                }
+
+                //If there are less than tuple candidates to work with, the test is invalid
+                if (candidateList.Count < tuple) continue;
+
+                //check each combination of the remaining candidates to see if they are in the same cells
+                int[] indexes = Enumerable.Range(0, tuple).ToArray();
+                while (indexes[indexes.Length - 1] > 0)
+                {
+                    //Needs to be a set
+                    ISet<Cell> cellSet = new SortedSet<Cell>();
+                    foreach (Cell cell in house.Cells)
+                    {
+                        foreach (int index in indexes)
                         {
-                            //increment appropriate indexes
-                            indexes[pointer]++;
-                            for (int i = pointer + 1; i < indexes.Length; i++)
+                            if (cell.CouldBe(candidateList[index]))
                             {
-                                indexes[i] = indexes[pointer] + (i - pointer);
+                                cellSet.Add(cell);
                             }
                         }
                     }
+                    if (cellSet.Count == tuple) //Success! Remove all other candidates from those cells
+                    {
+                        bool changed = false;
+                        IList<int> candidates = indexes.Select(index => candidateList[index]).ToList();
+
+                        foreach (Cell cell in cellSet)
+                        {
+                            for (int val = 1; val <= Constants.BoardLength; val++)
+                            {
+                                if (candidates.Contains(val)) continue;
+                                changed = cell.Candidates.EliminateCandidate(val) || changed;
+                            }
+                        }
+                        if (changed)
+                            return true;
+                    }
+
+                    indexes = GetNextCombination(indexes, candidateList.Count);
                 }
+
             }
 
             return false;
@@ -496,9 +457,9 @@ namespace Sudoku.Core
         /// wherein it appears only within the same x (or less) opposing lines 
         /// (cover set). Remove candidate from all other cells in cover set. 
         /// </summary>
-        /// <param name="lineCount"></param>
+        /// <param name="tuple"></param>
         /// <returns></returns>
-        private bool BasicFish(int lineCount)
+        private bool BasicFish(int tuple)
         {
             //Start with a random candidate
             int randomValIndex = new Random().Next(9);
@@ -507,28 +468,28 @@ namespace Sudoku.Core
                 int val = i % 9 + 1;
                 if (Board.IsValueSolved(val)) continue;
 
-                //Generate lists of rows and cols in which the candidate appears between 2 and x times
+                //Generate lists of rows and cols in which the candidate appears between 2 and tuple times
                 //There must be at least x lines in both the base and cover sets
                 if (val == 5)
                     Console.WriteLine();
                 IList<House> rows = (from row in Board.Rows
                                      let count = row.CountCellsWithCandidate(val)
-                                     where (count > 1 && count <= lineCount)
+                                     where (count > 1 && count <= tuple)
                                      select row)
                                      .ToList();
-                if (rows.Count < lineCount) continue;
+                if (rows.Count < tuple) continue;
 
 
                 IList<House> cols = (from col in Board.Columns
                                      let count = col.CountCellsWithCandidate(val)
-                                     where (count > 1 && count <= lineCount)
+                                     where (count > 1 && count <= tuple)
                                      select col)
                                      .ToList();
-                if (cols.Count < lineCount) continue;
+                if (cols.Count < tuple) continue;
 
 
-                if (FindBasicFish(val, lineCount, rows)) return true; // todo make random
-                if (FindBasicFish(val, lineCount, cols)) return true;
+                if (FindBasicFish(val, tuple, rows)) return true; // todo make random
+                if (FindBasicFish(val, tuple, cols)) return true;
 
             }
 
@@ -536,7 +497,7 @@ namespace Sudoku.Core
         }
 
         /// <summary>
-        /// Will search given lines and check each combination for a basic fish of given lineCount
+        /// Will search given lines and check each combination for a basic fish of given tuple
         /// </summary>
         /// <param name="val"></param>
         /// <param name="lineCount"></param>
@@ -544,52 +505,16 @@ namespace Sudoku.Core
         /// <returns></returns>
         private bool FindBasicFish(int val, int lineCount, IList<House> lines)
         {
-            var eliminated = new bool[lines.Count];
-
-            while (true)
+            // for each combination of lines, send to the check function
+            int[] indexes = Enumerable.Range(0, lineCount).ToArray();
+            while (indexes[indexes.Length - 1] > 0)
             {
-                // This loop handles changing earlier lines and exiting with failure
-                //While there aren't enough lines left
-                while (lines.Count - eliminated.Where(c => c).Count() < lineCount)
-                {
-                    // make the last 0 value 1, everything after = 0
-                    int lastIndex = -1;
-                    for (int i = eliminated.Length - 1; lastIndex == -1 && i >= 0; i--)
-                    {
-                        lastIndex = (!eliminated[i]) ? i : lastIndex;
-                    }
-                    if (lastIndex == -1)
-                        return false; //failure!
-                    eliminated[lastIndex] = true;
-                    for (int i = lastIndex + 1; i < eliminated.Length; i++)
-                    {
-                        eliminated[i] = false;
-                    }
-                }
-
-                //This loop handles changing the last line and exiting with success
-                while (!eliminated[eliminated.Length - 1])
-                {
-                    //get the first x lines that aren't eliminated
-                    IList<House> chosenLines = new List<House>();
-                    int lastIndex = 0;
-                    for (int i = 0; chosenLines.Count < lineCount && i < eliminated.Length; i++)
-                    {
-                        if (!eliminated[i])
-                        {
-                            chosenLines.Add(lines[i]);
-                        }
-                        lastIndex = i;
-                    }
-                    //send to check function, return true if change made
-                    if (CheckForNewFish(val, chosenLines))
-                        return true;
-
-                    //eliminate former xth line
-                    eliminated[lastIndex] = true;
-                }
-
+                IList<House> chosenLines = indexes.Select(index => lines[index]).ToList();
+                if (CheckForNewFish(val, chosenLines))
+                    return true;
+                indexes = GetNextCombination(indexes, lines.Count);
             }
+            return false;
         }
 
         /// <summary>
@@ -617,6 +542,7 @@ namespace Sudoku.Core
                     }
                 }
             }
+
             // if count of indexes < count of lines, throw exception
             if (coverSet.Count < len) throw new Exception("What the what?");
 
@@ -643,6 +569,42 @@ namespace Sudoku.Core
         #endregion
 
 
+        #region Static Methods
+        /// <summary>
+        /// Takes an array with a combination of indexes [0,1,2,3] and properly increments it. [0,1,2,4]
+        /// </summary>
+        /// <param name="indexes"></param>
+        /// <param name="highIndex">The length of the list being tested</param>
+        /// <returns>The incrmented array, or all zeroes if that was the last combination</returns>
+        public static int[] GetNextCombination(int[] indexes, int indexCount)
+        {
+
+            //increment the last index
+            indexes[indexes.Length - 1]++;
+
+            //while the last index is too high and two neighboring indexes have a difference > 1
+            //  find the last cell that is over one lower than the one after it
+            //  increment that cell, and fill all the others after it
+            //  if no change is made, the set is ruled out
+
+
+            int pointer = 0;
+            while (indexes[indexes.Length - 1] >= indexCount && pointer >= 0)
+            {
+                pointer = LastNonConsecutiveIndex(indexes);
+                if (pointer >= 0)
+                {
+                    //increment appropriate indexes
+                    indexes[pointer]++;
+                    for (int i = pointer + 1; i < indexes.Length; i++)
+                    {
+                        indexes[i] = indexes[pointer] + (i - pointer);
+                    }
+                }
+            }
+            return indexes[indexes.Length - 1] <= indexCount && pointer >= 0 ? indexes : new int[indexes.Length];
+        }
+
         /// <summary>
         /// Returns the last index that is at least two apart from the one after it
         /// Returns -1 if no such index exists (or the pattern for the whole array is arr[i+1} = arr[i]+1)
@@ -657,7 +619,8 @@ namespace Sudoku.Core
                 if (arr[i + 1] - (i + 1) != arr[i] - (i)) return i;
             }
             return -1;
-        }
+        } 
+        #endregion
 
     }
 }

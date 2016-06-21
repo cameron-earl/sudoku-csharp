@@ -1,10 +1,14 @@
 # sudoku
 This project was started as a way to practice MVC concepts using a Sudoku game and solver.
 
+<hr>
+
 <h4>Current features:</h4>
+<ul>
 <li>Sudoku object that can be used to play a game by numerous implementations</li>
 <li>Various solving methods.</li>
 <li>Console app implementation</li>
+</ul>
 
 <h4>To be added:</h4>
 <ul>

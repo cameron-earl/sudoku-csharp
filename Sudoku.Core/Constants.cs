@@ -30,14 +30,14 @@ namespace Sudoku.Core
             //YWing,
             SwordFish, // 3-line basic fish (like X-Wing)
             //XCycle,
-            //// ReSharper disable once InconsistentNaming
+                //// ReSharper disable once InconsistentNaming
             //XYChain,
             //ThreeMMedusa,
             JellyFish, // 4-line basic fish
             //AvoidableRectangle,
             //UniqueRectangle,
             //HiddenUniqueRectangle,
-            //// ReSharper disable once InconsistentNaming
+                //// ReSharper disable once InconsistentNaming
             //XYZWing,
             //AlignedPairExclusion,
             //GroupedXCycle,

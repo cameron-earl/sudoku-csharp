@@ -70,11 +70,6 @@ namespace Sudoku.Core
                 {
                     if (Cells[i].Value == Cells[j].Value)
                     {
-#if (DEBUG)
-                        {
-                            Console.WriteLine($"Invalid House! Cells {Cells[i].CellId} ({Cells[i].Value}) & {Cells[j].CellId} ({Cells[j].Value}) - {ToSimpleString()}");
-                        }
-#endif
                         return false;
                     }
                 }

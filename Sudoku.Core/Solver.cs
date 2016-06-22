@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 
@@ -462,7 +461,8 @@ namespace Sudoku.Core
         private bool BasicFish(int tuple)
         {
             //Start with a random candidate
-            int randomValIndex = new Random().Next(9);
+            var rnd = new Random();
+            int randomValIndex = rnd.Next(9);
             for (int i = randomValIndex; i < 9 + randomValIndex; i++)
             {
                 int val = i % 9 + 1;
@@ -470,8 +470,6 @@ namespace Sudoku.Core
 
                 //Generate lists of rows and cols in which the candidate appears between 2 and tuple times
                 //There must be at least x lines in both the base and cover sets
-                if (val == 5)
-                    Console.WriteLine();
                 IList<House> rows = (from row in Board.Rows
                                      let count = row.CountCellsWithCandidate(val)
                                      where (count > 1 && count <= tuple)
@@ -487,9 +485,13 @@ namespace Sudoku.Core
                                      .ToList();
                 if (cols.Count < tuple) continue;
 
-
-                if (FindBasicFish(val, tuple, rows)) return true; // todo make random
-                if (FindBasicFish(val, tuple, cols)) return true;
+                // Starting randomly with rows or cols, find a basic fish
+                IList<House>[] rowsAndCols = {rows, cols};
+                IList<House>[] shuffledRowsAndCols = rowsAndCols.OrderBy(a => rnd.Next()).ToArray();
+                foreach (IList<House> lineSet in shuffledRowsAndCols)
+                {
+                    if (FindBasicFish(val, tuple, lineSet)) return true;
+                }
 
             }
 
@@ -570,11 +572,12 @@ namespace Sudoku.Core
 
 
         #region Static Methods
+
         /// <summary>
         /// Takes an array with a combination of indexes [0,1,2,3] and properly increments it. [0,1,2,4]
         /// </summary>
         /// <param name="indexes"></param>
-        /// <param name="highIndex">The length of the list being tested</param>
+        /// <param name="indexCount"></param>
         /// <returns>The incrmented array, or all zeroes if that was the last combination</returns>
         public static int[] GetNextCombination(int[] indexes, int indexCount)
         {
@@ -622,5 +625,9 @@ namespace Sudoku.Core
         } 
         #endregion
 
+        public string GetHardestMove()
+        {
+            return _moveCount.Last(i => i.Value > 0).Key.ToString();
+        }
     }
 }

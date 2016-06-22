@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Sudoku.Core
 {
@@ -38,13 +39,13 @@ namespace Sudoku.Core
             }
 
             //remove impossible candidates in each house
-            foreach (var house in Houses)
+            foreach (House house in Houses)
             {
                 house.UpdateCandidates();
             }
         }
 
-        public Board(string valueString) : this(ConvertStringParameter(valueString.Replace(" ","")))
+        public Board(string valueString) : this(ConvertStringParameter(new Regex("[\\D]").Replace(valueString, "")))
         {
         }
 

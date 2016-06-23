@@ -125,12 +125,19 @@ namespace Sudoku.Core
 
         public bool IsValid()
         {
-            foreach (var house in Houses)
+            if (IsProvenInvalid) return false;
+            foreach (House house in Houses)
             {
-                if (!house.IsValid()) return false;
+                if (!house.IsValid())
+                {
+                    IsProvenInvalid = true;
+                }
+                    
             }
-            return true;
+            return !IsProvenInvalid;
         }
+
+        public bool IsProvenInvalid { get; private set; }
 
         public Cell GetCell(string coord)
         {
@@ -238,7 +245,37 @@ namespace Sudoku.Core
 
         #endregion
 
+        public static bool IsValidPuzzle(string boardStr)
+        {
+            boardStr = new Regex("[\\D]").Replace(boardStr, "");
+            if (boardStr.Length != 81) return false;
+            var testBoard = new Board(boardStr);
+            if (testBoard.IsSolved()) return false;
+            if (!testBoard.IsValid()) return false;
+            if (!testBoard.IsUnique()) return false;
+            var solver = new Solver(testBoard);
+            return solver.SolvePuzzle() || testBoard.IsUnique();
+        }
 
+        public bool IsUnique()
+        {
+            int containsCount = 0;
+            for (int val = 1; val <= Constants.BoardLength; val++)
+            {
+                if (this.Contains(val)) containsCount++;
+            }
+            if (containsCount < 8) return false;
+
+            //Other Uniqueness tests here
+            //Like unique rectangle test
+
+            return true;
+        }
+
+        public bool Contains(int val)
+        {
+            return Rows.Any(row => row.Contains(val));
+        }
     }
     
 }

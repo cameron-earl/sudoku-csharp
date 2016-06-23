@@ -32,6 +32,7 @@ namespace Sudoku.ConsoleApp
 
         public void SetupWindow()
         {
+            Clear();
             WindowHeight = ConsoleWindowHeight;
             SetCursorPosition(0,0);
             PrintBoardFrame();
@@ -118,7 +119,7 @@ namespace Sudoku.ConsoleApp
         private void MainMenu()
         {
             
-            var done = false;
+            bool done = false;
             do
             {
                 PrepareMenu();
@@ -131,7 +132,7 @@ namespace Sudoku.ConsoleApp
                 WriteLine("  X. Exit program");
 
                 const string regexStr = "[a-ex]";
-                var choice = Menu.GetCharacterInput(new Regex(regexStr));
+                char choice = Menu.GetCharacterInput(new Regex(regexStr));
                 switch (choice)
                 {
                     case 'a':
@@ -165,7 +166,7 @@ namespace Sudoku.ConsoleApp
                 }
             } while (!done && !Board.IsSolved());
 
-            if (Board.IsSolved()) PrintMessage($"Congratulations! Sudoku solved!\n{Solver.MoveCountsToString()}{Board.ToSimpleString()}");
+            if (Board.IsSolved()) PrintMessage($"Congratulations! Sudoku solved!\n{Solver.MoveCountsToString()}");
         }
 
         private void PrintCandidatesForBoard()

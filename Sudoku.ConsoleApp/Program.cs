@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Data.SqlClient;
+using System.Text.RegularExpressions;
 using Sudoku.Core;
+using static System.Console;
 
 namespace Sudoku.ConsoleApp
 {
     public class Program
     {
-        static void Main()
+        public static void Main()
         {
             //Load sample boards from app.config
             //var sampleBoards = ConfigurationManager.GetSection("sampleBoards") as NameValueCollection;
@@ -17,26 +19,77 @@ namespace Sudoku.ConsoleApp
             //    return;
             //}
 
-            //add sample boards to database
-            //foreach (string board in sampleBoards)
-            //{
-            //    Console.WriteLine($"Adding {board}");
+            MainMenu();
 
-            //    DBHelper.AddBoardToDatabase(sampleBoards[board]);
+            
+            
+            
+           
+        }
 
-            //    //SqlCommand insertCommand = new SqlCommand($"INSERT INTO dbo.Boards (Puzzle) VALUES ({board})");
-            //}
-            //Console.ReadKey();
-            //return;
+        private static void MainMenu()
+        {
+            Clear();
+            bool done = false;
+
+            while (!done)
+            {
+                string board = null;
+                Menu.PrintHeading("Welcome to Sudoku!");
+                WriteLine("  A. Input a Game");
+                WriteLine("  B. Play a Random Game");
+                WriteLine("  C. Play an Easy Game");
+                WriteLine("  D. Play a Medium Game");
+                WriteLine("  E. Play a Hard Game");
+                WriteLine("  X. Exit program");
+
+                const string regexStr = "[a-ex]";
+                char choice = Menu.GetCharacterInput(new Regex(regexStr));
+                switch (choice)
+                {
+                    case 'a':
+                        board = GetBoardInput();
+                        break;
+                    case 'b':
+                        board = GetRandomBoard();
+                        break;
+                    case 'c':
+                        board = GetEasyBoard();
+                        break;
+                    case 'd':
+                        board = GetMediumBoard();
+                        break;
+                    case 'e':
+                        board = GetHardBoard();
+                        break;
+                    case 'x':
+                        done = true;
+                        break;
+                    default:
+                        WriteLine("Something went wrong, try again.");
+                        break;
+                }
+                if (board != null)
+                {
+                    PlayGame(board);
+                }
+            }
+
+            
+
+        }
+
+        private static void PlayGame(string boardStr)
+        {
 
             using (var conn = new SqlConnection(DBHelper.ConnStr))
             {
+
                 var cmd = new SqlCommand()
                 {
-                    CommandText = $"SELECT TOP 1 Id, Puzzle, TimesPlayed FROM dbo.Boards ORDER BY NEWID()",
+                    CommandText = $"SELECT TOP 1 Id, Puzzle, TimesPlayed FROM dbo.Boards WHERE Puzzle='{boardStr}'",
                     Connection = conn
                 };
-                string boardStr = "";
                 int id = -1;
                 int playCount = 0;
                 conn.Open();
@@ -50,23 +103,103 @@ namespace Sudoku.ConsoleApp
                     }
                     conn.Close();
                 }
-                //var randomBoard = new Board(sampleBoards[new Random().Next(sampleBoards.Count)]);
-                //var testBoard = new Board(sampleBoards["nakedTriple1"]);
 
                 var testBoard = new Board(boardStr);
                 var thisGame = new Game(testBoard);
-                Console.WriteLine($"Playing board #{id}");
-                Console.ReadKey();
                 thisGame.Play();
                 playCount++;
-                cmd.CommandText = $"UPDATE dbo.Boards SET TimesPlayed = {playCount} WHERE Id = {id}";
+                if (id >= 1)
+                {
+                    cmd.CommandText = $"UPDATE dbo.Boards SET TimesPlayed = {playCount} WHERE Id = {id}";
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                    conn.Close();
+                }
+                
+            }
+        }
+
+        private static string GetHardBoard()
+        {
+            throw new NotImplementedException();
+        }
+
+        private static string GetMediumBoard()
+        {
+            throw new NotImplementedException();
+        }
+
+        private static string GetEasyBoard()
+        {
+            throw new NotImplementedException();
+        }
+
+        private static string GetRandomBoard()
+        {
+            string boardStr = "";
+            using (var conn = new SqlConnection(DBHelper.ConnStr))
+            {
+                var cmd = new SqlCommand()
+                {
+                    CommandText = $"SELECT TOP 1 Puzzle FROM dbo.Boards ORDER BY NEWID()",
+                    Connection = conn
+                };
+                conn.Open();
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        boardStr = reader.GetString(0);
+                    }
+                    conn.Close();
+                }
+            }
+            return boardStr;
+        }
+
+        private static string GetBoardInput()
+        {
+            bool isValid = false;
+            string boardStr = "";
+            while (!isValid)
+            {
+                WriteLine("Please enter a Sudoku puzzle. There should be 81 numbers, with blanks represented as zeroes.");
+                string rawInput = ReadLine() + "";
+                boardStr = new Regex("[\\D]").Replace(rawInput, "");
+                if (boardStr.Length == 81) isValid = true;
+            }
+
+            if (!Board.IsValidPuzzle(boardStr))
+            {
+                boardStr = null;
+                WriteLine("The board you entered is invalid. Try again.");
+            }
+
+            if (boardStr == null) return null;
+
+            // Add board to database
+            var board = new Board(boardStr);
+            var solver = new Solver(board);
+            if (!solver.SolvePuzzle()) return boardStr; //TODO add to unsolvable database
+            string hardestMove = solver.GetHardestMove();
+            string solvedValues = new Regex("[\\D]").Replace(board.ToSimpleString(), "");
+
+            using (var conn = new SqlConnection(DBHelper.ConnStr))
+            {
+                var cmd = new SqlCommand()
+                {
+                    CommandText = $"INSERT INTO dbo.Boards (Puzzle, SolvedValues, HardestMove) VALUES ('{boardStr}','{solvedValues}','{hardestMove}')",
+                    Connection = conn
+                };
                 conn.Open();
                 cmd.ExecuteNonQuery();
                 conn.Close();
+                WriteLine($"Board is solvable and added to database. Hardest move is {hardestMove}");
+                ReadKey();
             }
-            
-            
-           
+
+            return boardStr;
+
         }
     }
 

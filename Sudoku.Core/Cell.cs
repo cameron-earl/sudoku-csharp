@@ -148,5 +148,13 @@ namespace Sudoku.Core
             if (Value == val) return true;
             return val != 0 && Candidates.Contains(val);
         }
+
+        public bool CanSee(Cell otherCell)
+        {
+            if (CellId == otherCell.CellId) return false;
+            return (RowNumber == otherCell.RowNumber
+                    || ColumnNumber == otherCell.ColumnNumber
+                    || BoxNumber == otherCell.BoxNumber);
+        }
     }
 }

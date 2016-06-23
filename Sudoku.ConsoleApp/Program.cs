@@ -77,6 +77,7 @@ namespace Sudoku.ConsoleApp
 
         private static void PlayGame(string boardStr)
         {
+            boardStr = new Regex("[\\D]").Replace(boardStr, "");
 
             using (var conn = new SqlConnection(DBHelper.ConnStr))
             {
@@ -111,7 +112,7 @@ namespace Sudoku.ConsoleApp
                     cmd.ExecuteNonQuery();
                     conn.Close();
                 }
-                else // add board
+                else if (testBoard.IsSolved())// add board
                 {
                     Solver solver = thisGame.Solver;
                     boardStr = new Regex("[\\D]").Replace(boardStr, "");
@@ -120,7 +121,7 @@ namespace Sudoku.ConsoleApp
 
                     cmd = new SqlCommand()
                     {
-                        CommandText = $"INSERT INTO dbo.Boards (Puzzle, SolvedValues, HardestMove) VALUES ('{boardStr}','{solvedValues}','{hardestMove}')",
+                        CommandText = $"INSERT INTO dbo.Boards (Puzzle, SolvedValues, HardestMove, TimesPlayed) VALUES ('{boardStr}','{solvedValues}','{hardestMove}',1)",
                         Connection = conn
                     };
                     conn.Open();
@@ -217,7 +218,7 @@ namespace Sudoku.ConsoleApp
                 conn.Open();
                 cmd.ExecuteNonQuery();
                 conn.Close();
-                WriteLine($"Board is solvable and added to database. Hardest move is {hardestMove}");
+                WriteLine($"Board is now added to database! Hardest move is {hardestMove}");
                 ReadKey();
             }
 

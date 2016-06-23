@@ -611,15 +611,17 @@ namespace Sudoku.Core
             
             // create set of chosen 4 cells
             IList<Cell> chosenCells = (from line in chosenLines from cell in line.Cells where cell.CouldBe(val) select cell).ToList();
+            IList<Cell> endCells = new List<Cell>(2);
 
             //make sure there's a link between the two lines
             int maxCount = 1;
             foreach (Cell chosenCell in chosenCells)
             {
-                maxCount = Math.Max(chosenCells.Count(c => chosenCell.CanSee(c)), maxCount);
+                int count = chosenCells.Count(c => chosenCell.CanSee(c));
+                if (count == 1) endCells.Add(chosenCell);
+                maxCount = Math.Max(count, maxCount);
             }
-            if (maxCount > 2) throw new Exception("Are these cells in the same box?");
-            if (maxCount < 2) return false;
+            if (maxCount != 2) return false;
 
             // gather cells which see two of these cells into a list
             IList<Cell> otherCells = new List<Cell>();
@@ -628,8 +630,8 @@ namespace Sudoku.Core
                 if (otherCell.IsSolved()) continue;
                 if (!otherCell.CouldBe(val)) continue;
                 if (chosenCells.Contains(otherCell)) continue;
-                int seeCount = chosenCells.Count(chosenCell => otherCell.CanSee(chosenCell));
-                if (seeCount > 1) otherCells.Add(otherCell);
+                int seeCount = endCells.Count(endCell => otherCell.CanSee(endCell));
+                if (seeCount == 2) otherCells.Add(otherCell);
             }
 
             // and eliminate that candidate from each cell in the second list

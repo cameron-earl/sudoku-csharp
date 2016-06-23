@@ -18,14 +18,14 @@ namespace Sudoku.Core
             PlayerInput,
             NakedSingle, // Last unfilled cell in a house
             HiddenSingle, // Only cell in a house with a particular candidate
-            //NakedPair, // Two cells in the same house have the same two candidates, eliminating those candidates from the rest of the house
-            //HiddenPair, // Two candidates can only be found in two cells of the same house, eliminating all other candidates in those two cells
-            //IntersectionRemoval, // All of a certain candidate in a house share another house, eliminating them from the other cells in the second house
-            //NakedTriple, // Three cells in the same house have only three candidates between them, eliminating those candidates from the rest of the house
-            //HiddenTriple, // Three candidates can only be found in three cells of the same house, eliminating all other candidates in those three cells
-            //NakedQuad, // Four cells in the same house have only four candidates between them, eliminating those candidates from the rest of the house
-            //HiddenQuad, // Four candidates can only be found in four cells of the same house, eliminating all other candidates in those three cells
-            //XWing, // For a certain candidate, pick two lines (base sets) in which all the candidate is in the same two opposing lines (cover sets). Remove candidate from all other cells in the cover sets.
+            NakedPair, // Two cells in the same house have the same two candidates, eliminating those candidates from the rest of the house
+            HiddenPair, // Two candidates can only be found in two cells of the same house, eliminating all other candidates in those two cells
+            IntersectionRemoval, // All of a certain candidate in a house share another house, eliminating them from the other cells in the second house
+            NakedTriple, // Three cells in the same house have only three candidates between them, eliminating those candidates from the rest of the house
+            HiddenTriple, // Three candidates can only be found in three cells of the same house, eliminating all other candidates in those three cells
+            NakedQuad, // Four cells in the same house have only four candidates between them, eliminating those candidates from the rest of the house
+            HiddenQuad, // Four candidates can only be found in four cells of the same house, eliminating all other candidates in those three cells
+            XWing, // For a certain candidate, pick two lines (base sets) in which all the candidate is in the same two opposing lines (cover sets). Remove candidate from all other cells in the cover sets.
             Skyscraper, //Taken from Hodoku's Single digit patterns, start like X-wing. But if any two cells from different lines see each other, remove candidate from all cells that see any two cells in the set of four.
             //SimpleColoring,
             //YWing,

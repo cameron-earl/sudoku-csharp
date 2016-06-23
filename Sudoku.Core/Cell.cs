@@ -18,7 +18,7 @@ namespace Sudoku.Core
             SetHouses();
             Candidates = new CandidateSet(value);
             Value = value;
-            if (value > 0) SolveMethod = Constants.SolveMethod.Provided;
+            if (value > 0) SolvingTechnique = Constants.SolvingTechnique.Provided;
         }
 
         public int CellId { get; }
@@ -54,7 +54,7 @@ namespace Sudoku.Core
 
         public CandidateSet Candidates { get; }
 
-        public Constants.SolveMethod SolveMethod { get; set; } = Constants.SolveMethod.Unsolved;
+        public Constants.SolvingTechnique SolvingTechnique { get; set; } = Constants.SolvingTechnique.Unsolved;
 
         public bool HasChanged { get; set; } = true; // todo Should be removed as soon as observer pattern is set up
 

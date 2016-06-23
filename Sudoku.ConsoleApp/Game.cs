@@ -91,16 +91,16 @@ namespace Sudoku.ConsoleApp
         {
             Cell cell = Board.GetCell(cellId);
             SetCursorPosition(CursorColForCell(cellId), CursorRowForCell(cellId));
-            Constants.SolveMethod solveMethod = cell.SolveMethod;
-            switch (solveMethod)
+            Constants.SolvingTechnique solvingTechnique = cell.SolvingTechnique;
+            switch (solvingTechnique)
             {
-                case Constants.SolveMethod.Provided:
+                case Constants.SolvingTechnique.Provided:
                     ForegroundColor = _providedValueColor;
                     break;
-                case Constants.SolveMethod.PlayerInput:
+                case Constants.SolvingTechnique.PlayerInput:
                     ForegroundColor = _playerInputColor;
                     break;
-                case Constants.SolveMethod.NakedSingle:
+                case Constants.SolvingTechnique.NakedSingle:
                     ForegroundColor = ConsoleColor.DarkYellow;
                     break;
                 default:
@@ -217,7 +217,7 @@ namespace Sudoku.ConsoleApp
             {
                 return;
             }
-            Board.SetCellValue(cell.CellId,newValue,Constants.SolveMethod.PlayerInput);
+            Board.SetCellValue(cell.CellId,newValue,Constants.SolvingTechnique.PlayerInput);
         }
 
         private int GetValueInput()
@@ -254,7 +254,7 @@ namespace Sudoku.ConsoleApp
                     continue;
                 }
                 var cell = Board.GetCell(input);
-                if (cell.SolveMethod == Constants.SolveMethod.Provided)
+                if (cell.SolvingTechnique == Constants.SolvingTechnique.Provided)
                 {
                     error = "Cannot change a provided cell value!";
                     isValid = false;

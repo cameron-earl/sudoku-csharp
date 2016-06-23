@@ -7,15 +7,15 @@ namespace Sudoku.Core
 {
     public class Solver
     {
-        private readonly Dictionary<Constants.SolveMethod, int> _moveCount =
-            new Dictionary<Constants.SolveMethod, int>();
+        private readonly Dictionary<Constants.SolvingTechnique, int> _moveCount =
+            new Dictionary<Constants.SolvingTechnique, int>();
 
         public Solver(Board board)
         {
             Board = board;
-            foreach (Constants.SolveMethod method in Enum.GetValues(typeof(Constants.SolveMethod)))
+            foreach (Constants.SolvingTechnique method in Enum.GetValues(typeof(Constants.SolvingTechnique)))
             {
-                if (method > Constants.SolveMethod.Provided) _moveCount.Add(method, 0);
+                if (method > Constants.SolvingTechnique.Provided) _moveCount.Add(method, 0);
             }
         }
 
@@ -24,9 +24,9 @@ namespace Sudoku.Core
         public bool SolveEasiestMove()
         {
             bool moveSolved = false;
-            Constants.SolveMethod max =
-                Enum.GetValues(typeof(Constants.SolveMethod)).Cast<Constants.SolveMethod>().Last();
-            for (var method = Constants.SolveMethod.NakedSingle; !moveSolved && method <= max; method++)
+            Constants.SolvingTechnique max =
+                Enum.GetValues(typeof(Constants.SolvingTechnique)).Cast<Constants.SolvingTechnique>().Last();
+            for (var method = Constants.SolvingTechnique.NakedSingle; !moveSolved && method <= max; method++)
             {
                 moveSolved = SolveOneMove(method);
                 if (moveSolved) _moveCount[method]++;
@@ -49,7 +49,7 @@ namespace Sudoku.Core
         /// </summary>
         /// <param name="method"></param>
         /// <returns></returns>
-        private bool SolveOneMove(Constants.SolveMethod method)
+        private bool SolveOneMove(Constants.SolvingTechnique method)
         {
             bool moveSolved;
             try
@@ -75,9 +75,9 @@ namespace Sudoku.Core
             return Board.IsSolved();
         }
 
-        #region Named Solving Methods
+        #region Named Solving Techniques
 
-        // All these methods must have the exact same name as the corresponding enum in Constants.SolveMethod
+        // All these methods must have the exact same name as the corresponding enum in Constants.SolvingTechnique
         // When coded, make sure to uncomment the matching enum.
         // ReSharper disable UnusedMember.Local
 
@@ -98,7 +98,7 @@ namespace Sudoku.Core
                 {
                     continue;
                 }
-                Board.SetCellValue(cellId, cell.Candidates.SolvedValue, Constants.SolveMethod.NakedSingle);
+                Board.SetCellValue(cellId, cell.Candidates.SolvedValue, Constants.SolvingTechnique.NakedSingle);
 
                 changed = true;
             }
@@ -150,7 +150,7 @@ namespace Sudoku.Core
                         && lastCell.Value == 0
                         && (lastCell.Candidates.SolvedValue == val || lastCell.Candidates.SolvedValue == 0))
                     {
-                        Board.SetCellValue(lastCell.CellId, val, Constants.SolveMethod.HiddenSingle);
+                        Board.SetCellValue(lastCell.CellId, val, Constants.SolvingTechnique.HiddenSingle);
                         return true;
                     }
                 }
@@ -304,6 +304,55 @@ namespace Sudoku.Core
         {
             return HiddenTuple(4);
         }
+
+        private bool Skyscraper()
+        {
+            //Start with a random candidate
+            var rnd = new Random();
+            int randomValIndex = rnd.Next(9);
+            for (int i = randomValIndex; i < 9 + randomValIndex; i++)
+            {
+                int val = i % 9 + 1;
+                if (Board.IsValueSolved(val)) continue;
+
+                IList<IList<House>> rowsAndCols = new List<IList<House>>(2);
+                //Generate lists of rows and cols in which the candidate appears between 2 and tuple times
+                //There must be at least x lines in both the base and cover sets
+                IList<House> rows = (from row in Board.Rows
+                                     let count = row.CountCellsWithCandidate(val)
+                                     where (count == 2)
+                                     select row)
+                                     .ToList();
+                if (rows.Count >= 2) rowsAndCols.Add(rows);
+
+
+                IList<House> cols = (from col in Board.Columns
+                                     let count = col.CountCellsWithCandidate(val)
+                                     where (count == 2)
+                                     select col)
+                                     .ToList();
+                if (cols.Count >= 2) rowsAndCols.Add(cols);
+
+                // Starting randomly with rows or cols, find a basic fish
+                IList<House>[] shuffledRowsAndCols = rowsAndCols.OrderBy(a => rnd.Next()).ToArray();
+                foreach (IList<House> lineSet in shuffledRowsAndCols)
+                {
+                    int[] indexes = Enumerable.Range(0, 2).ToArray();
+                    while (indexes[indexes.Length - 1] > 0)
+                    {
+                        IList<House> chosenLines = indexes.Select(index => lineSet[index]).ToList();
+                        if (CheckForSkyscraper(val, chosenLines))
+                            return true;
+                        indexes = GetNextCombination(indexes, lineSet.Count);
+                    }
+                }
+
+            }
+
+            return false;
+        }
+
+
 
         #endregion
 
@@ -490,34 +539,21 @@ namespace Sudoku.Core
                 IList<House>[] shuffledRowsAndCols = rowsAndCols.OrderBy(a => rnd.Next()).ToArray();
                 foreach (IList<House> lineSet in shuffledRowsAndCols)
                 {
-                    if (FindBasicFish(val, tuple, lineSet)) return true;
+                    int[] indexes = Enumerable.Range(0, tuple).ToArray();
+                    while (indexes[indexes.Length - 1] > 0)
+                    {
+                        IList<House> chosenLines = indexes.Select(index => lineSet[index]).ToList();
+                        if (CheckForNewFish(val, chosenLines))
+                            return true;
+                        indexes = GetNextCombination(indexes, lineSet.Count);
+                    }
                 }
 
             }
 
             return false;
         }
-
-        /// <summary>
-        /// Will search given lines and check each combination for a basic fish of given tuple
-        /// </summary>
-        /// <param name="val"></param>
-        /// <param name="lineCount"></param>
-        /// <param name="lines"></param>
-        /// <returns></returns>
-        private bool FindBasicFish(int val, int lineCount, IList<House> lines)
-        {
-            // for each combination of lines, send to the check function
-            int[] indexes = Enumerable.Range(0, lineCount).ToArray();
-            while (indexes[indexes.Length - 1] > 0)
-            {
-                IList<House> chosenLines = indexes.Select(index => lines[index]).ToList();
-                if (CheckForNewFish(val, chosenLines))
-                    return true;
-                indexes = GetNextCombination(indexes, lines.Count);
-            }
-            return false;
-        }
+        
 
         /// <summary>
         /// Checks a certain combination of lines for a new fish (of that many lines)
@@ -562,6 +598,42 @@ namespace Sudoku.Core
                                     .ToList();
             // and eliminate that candidate from each cell in the list
             foreach (Cell cell in coverCells)
+            {
+                change = cell.Candidates.EliminateCandidate(val) || change;
+            }
+            // return whether change was made
+            return change;
+        }
+
+        private bool CheckForSkyscraper(int val, IEnumerable<House> chosenLines) //TODO false positives
+        {
+            bool change = false;
+            
+            // create set of chosen 4 cells
+            IList<Cell> chosenCells = (from line in chosenLines from cell in line.Cells where cell.CouldBe(val) select cell).ToList();
+
+            //make sure there's a link between the two lines
+            int maxCount = 1;
+            foreach (Cell chosenCell in chosenCells)
+            {
+                maxCount = Math.Max(chosenCells.Count(c => chosenCell.CanSee(c)), maxCount);
+            }
+            if (maxCount > 2) throw new Exception("Are these cells in the same box?");
+            if (maxCount < 2) return false;
+
+            // gather cells which see two of these cells into a list
+            IList<Cell> otherCells = new List<Cell>();
+            foreach (Cell otherCell in Board.Cells)
+            {
+                if (otherCell.IsSolved()) continue;
+                if (!otherCell.CouldBe(val)) continue;
+                if (chosenCells.Contains(otherCell)) continue;
+                int seeCount = chosenCells.Count(chosenCell => otherCell.CanSee(chosenCell));
+                if (seeCount > 1) otherCells.Add(otherCell);
+            }
+
+            // and eliminate that candidate from each cell in the second list
+            foreach (Cell cell in otherCells)
             {
                 change = cell.Candidates.EliminateCandidate(val) || change;
             }

@@ -152,7 +152,7 @@ namespace Sudoku.Core
             return (Cells[cellId - 1]);
         }
 
-        public void SetCellValue(int cellId, int newValue, Constants.SolveMethod solveMethod)
+        public void SetCellValue(int cellId, int newValue, Constants.SolvingTechnique solvingTechnique)
         {
             Cell cell = GetCell(cellId);
             House row = Rows[cell.RowNumber - 1];
@@ -160,12 +160,12 @@ namespace Sudoku.Core
             House box = Boxes[cell.BoxNumber - 1];
 
             //Validate move legality
-            if (cell.SolveMethod == Constants.SolveMethod.Provided)
+            if (cell.SolvingTechnique == Constants.SolvingTechnique.Provided)
             {
                 throw new Exception("Tried to change a provided value");
             }
-            if (cell.Value > 0 && (solveMethod != Constants.SolveMethod.PlayerInput
-                || (solveMethod == Constants.SolveMethod.PlayerInput && cell.SolveMethod != Constants.SolveMethod.PlayerInput)))
+            if (cell.Value > 0 && (solvingTechnique != Constants.SolvingTechnique.PlayerInput
+                || (solvingTechnique == Constants.SolvingTechnique.PlayerInput && cell.SolvingTechnique != Constants.SolvingTechnique.PlayerInput)))
             {
                 throw new Exception("Tried to change solved value");
             }
@@ -180,7 +180,7 @@ namespace Sudoku.Core
 
             //Change value and update candidates in its houses
             cell.Value = newValue;
-            cell.SolveMethod = solveMethod;
+            cell.SolvingTechnique = solvingTechnique;
             row.UpdateCandidates(newValue);
             col.UpdateCandidates(newValue);
             box.UpdateCandidates(newValue);
@@ -262,7 +262,7 @@ namespace Sudoku.Core
             int containsCount = 0;
             for (int val = 1; val <= Constants.BoardLength; val++)
             {
-                if (this.Contains(val)) containsCount++;
+                if (Contains(val)) containsCount++;
             }
             if (containsCount < 8) return false;
 

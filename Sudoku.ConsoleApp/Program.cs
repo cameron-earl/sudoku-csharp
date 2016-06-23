@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Specialized;
+using System.Configuration;
 using System.Data.SqlClient;
 using System.Text.RegularExpressions;
 using Sudoku.Core;
@@ -10,14 +12,7 @@ namespace Sudoku.ConsoleApp
     {
         public static void Main()
         {
-            //Load sample boards from app.config
-            //var sampleBoards = ConfigurationManager.GetSection("sampleBoards") as NameValueCollection;
-            //if (sampleBoards == null)
-            //{
-            //    Console.WriteLine("Please adjust App.config to include a sample board.");
-            //    Console.ReadKey();
-            //    return;
-            //}
+            
 
             MainMenu();
 
@@ -29,18 +24,19 @@ namespace Sudoku.ConsoleApp
 
         private static void MainMenu()
         {
-            Clear();
+            
             bool done = false;
 
             while (!done)
             {
+                Clear();
                 string board = null;
                 Menu.PrintHeading("Welcome to Sudoku!");
                 WriteLine("  A. Input a Game");
                 WriteLine("  B. Play a Random Game");
                 WriteLine("  C. Play an Easy Game");
                 WriteLine("  D. Play a Medium Game");
-                WriteLine("  E. Play a Hard Game");
+                WriteLine("  E. Play an Unsolved Game");
                 WriteLine("  X. Exit program");
 
                 const string regexStr = "[a-ex]";
@@ -115,13 +111,40 @@ namespace Sudoku.ConsoleApp
                     cmd.ExecuteNonQuery();
                     conn.Close();
                 }
+                else // add board
+                {
+                    Solver solver = thisGame.Solver;
+                    boardStr = new Regex("[\\D]").Replace(boardStr, "");
+                    string hardestMove = solver.GetHardestMove();
+                    string solvedValues = new Regex("[\\D]").Replace(testBoard.ToSimpleString(), "");
+
+                    cmd = new SqlCommand()
+                    {
+                        CommandText = $"INSERT INTO dbo.Boards (Puzzle, SolvedValues, HardestMove) VALUES ('{boardStr}','{solvedValues}','{hardestMove}')",
+                        Connection = conn
+                    };
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                    conn.Close();
+                    WriteLine($"Board is solvable and added to database. Hardest move is {hardestMove}");
+                    ReadKey();
+                }
                 
             }
         }
 
         private static string GetHardBoard()
         {
-            throw new NotImplementedException();
+            //Load sample boards from app.config
+            var sampleBoards = ConfigurationManager.GetSection("sampleBoards") as NameValueCollection;
+            if (sampleBoards == null)
+            {
+                Console.WriteLine("Please adjust App.config to include a sample board.");
+                Console.ReadKey();
+                return null;
+            }
+            return sampleBoards.Get(new Random().Next(sampleBoards.Count));
+
         }
 
         private static string GetMediumBoard()

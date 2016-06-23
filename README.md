@@ -22,5 +22,6 @@ This project was started as a way to practice MVC concepts using a Sudoku game a
 <ul>
 <li>IsValid check on all candidates, cells, houses, and board that builds upward</li>
 <li>Skyscraper solution as found here: <a href="http://hodoku.sourceforge.net/en/tech_sdp.php">http://hodoku.sourceforge.net/en/tech_sdp.php</a></li>
+<li>Create a new table for unsolved sudokus</li>
 <li><s>Complete board entry in consoleapp</s></li>
 </ul>

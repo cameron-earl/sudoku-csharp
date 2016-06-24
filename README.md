@@ -21,7 +21,8 @@ This project was started as a way to practice MVC concepts using a Sudoku game a
 <h4>Near Term TODO:</h4>
 <ul>
 	<li>IsValid check on all candidates, cells, houses, and board that builds upward</li>
-
+	<li>Change solving process to find all potential moves before doing any, unless specifically solving whole puzzle</li>
+	<li>If a move is available in a cell, highlight according to the hardest move necessary to solve it in the easiest way.</li>
 </ul>
 
 <h4>Changelog</h4>

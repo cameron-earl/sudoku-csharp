@@ -47,7 +47,7 @@ namespace Sudoku.Core
             foreach (Cell cell in Cells)
             {
 
-                if (cell.Value == 0)
+                if (!cell.IsSolved())
                 {
                     cell.Candidates.EliminateCandidate(val);
                 }
@@ -64,6 +64,9 @@ namespace Sudoku.Core
 
         public bool IsValid()
         {
+            if (Cells.Any(cell => !cell.IsValid)) return false;
+
+            //Check for duplicates
             for (int i = 0; i < Constants.BoardLength - 1; i++)
             {
                 for (int j = i + 1; Cells[i].Value > 0 && j < Constants.BoardLength; j++)

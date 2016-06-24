@@ -24,25 +24,14 @@ This project was started as a way to practice MVC concepts using a Sudoku game a
 	
 </ul>
 
-<h4>Near Term TODO:</h4>
+<h4>Near-term to-do:</h4>
 <ul>
 	<li>IsValid check on all candidates, cells, houses, and board that builds upward</li>
 	<li>Add Bowman's Bingo or other brute force solving technique so that all can be solved</li>
 	<li>Add logger which can display solution process or error messages</li>
 </ul>
 
-<h4>Changelog</h4>
-<ul>
-	<li>6/23/16 Complete board entry in consoleapp</li>
-    <li>6/23/16 Skyscraper technique as found here: <a href="http://hodoku.sourceforge.net/en/tech_sdp.php">http://hodoku.sourceforge.net/en/tech_sdp.php</a></li>
-	<li>6/23/16 Create a new table for unsolved sudokus</li>
-    <li>6/23/16 Newly solved sudokus in unsolved section will be removed when added to solved database</li>
-    <li>6/24/16 Improve technique testing by testing potential moves against completed board</li>
-    <li>6/24/16 Improve technique testing by creating function that tests it preferentially against all solved boards</li>
-    <li>6/24/16 Add two-string kite technique</li>
-</ul>
-
-<h4>Sudoku-based Incremental idea</h4>
+<h4>Sudoku-based incremental idea</h4>
 <ul>
     <li>Earn exp as certain moves are performed, which eventually allow to buy auto-solving agents</li>
     <li>Earn money dependent on difficulty of move and time</li>

@@ -21,15 +21,26 @@ namespace Sudoku.Core
             if (value > 0) SolvingTechnique = Constants.SolvingTechnique.Provided;
         }
 
-        public int CellId { get; }
-
         public Cell(int cellId) : this(cellId, 0)
         {
+        }
+
+        public Cell(Cell otherCell)
+        {
+            CellId = otherCell.CellId;
+            Candidates = new CandidateSet(otherCell.Candidates);
+            Value = otherCell.Value;
+            RowNumber = otherCell.RowNumber;
+            ColumnNumber = otherCell.ColumnNumber;
+            BoxNumber = otherCell.ColumnNumber;
+            SolvingTechnique = otherCell.SolvingTechnique;
         }
 
         #endregion
 
         #region Properties
+
+        public int CellId { get; }
 
         public int Value
         {
@@ -52,11 +63,13 @@ namespace Sudoku.Core
 
         public int BoxNumber { get; private set; }
 
-        public CandidateSet Candidates { get; }
+        public CandidateSet Candidates { get; set; }
 
         public Constants.SolvingTechnique SolvingTechnique { get; set; } = Constants.SolvingTechnique.Unsolved;
 
         public bool HasChanged { get; set; } = true; // todo Should be removed as soon as observer pattern is set up
+
+        public bool IsValid => Candidates.IsValid;
 
         #endregion
 
@@ -109,7 +122,7 @@ namespace Sudoku.Core
 
         public bool IsSolved()
         {
-            return (Candidates.SolvedValue > 0);
+            return (Value > 0);
         }
 
         #endregion
@@ -163,5 +176,6 @@ namespace Sudoku.Core
             var otherCell = (Cell) obj;
             return CellId == otherCell.CellId;
         }
+        
     }
 }

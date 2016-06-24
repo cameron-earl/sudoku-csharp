@@ -176,7 +176,22 @@ namespace Sudoku.ConsoleApp
 
         private void PrintUnsolvableMessage()
         {
-            PrintMessage($"If you can solve this, you're smarter than I am.\n{Solver.MoveCountsToString()}");
+            Board.IsCorrectlySolved();
+            if (Board.IsProvenInvalid)
+            {
+                PrintMessage($"Somewhere along the line a bad value was chosen. The board is invalid.");
+                Menu.PrintHeading($"Reset?");
+                if (Menu.GetYesNoInput())
+                {
+                    Board.ResetBoard();
+                    Solver = new Solver(Board);
+                }
+            }
+            else
+            {
+                PrintMessage($"If you can solve this, you're smarter than I am.\n{Solver.MoveCountsToString()}");
+            }
+            
             
         }
 

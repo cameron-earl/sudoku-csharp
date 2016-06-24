@@ -109,6 +109,7 @@ namespace Sudoku.Core
         public bool SolvePuzzle()
         {
             bool changed = true;
+            if (!Board.IsCorrectlySolved() || Board.IsProvenInvalid) return false;
             while (changed)
             {
                 changed = SolveEasiestMove();
@@ -135,10 +136,8 @@ namespace Sudoku.Core
                 int cellId = i%Constants.TotalCellCount + 1;
                 Cell cell = Board.GetCell(cellId);
 
-                if (cell.Value > 0 || !cell.IsSolved())
-                {
-                    continue;
-                }
+                if (cell.IsSolved() || cell.Candidates.SolvedValue == 0) continue;
+
                 Board.SetCellValue(cellId, cell.Candidates.SolvedValue, Constants.SolvingTechnique.NakedSingle);
 
                 changed = true;
@@ -188,7 +187,7 @@ namespace Sudoku.Core
 
                     if (candidateCount == 1
                         && lastCell != null
-                        && lastCell.Value == 0
+                        && !lastCell.IsSolved()
                         && (lastCell.Candidates.SolvedValue == val || lastCell.Candidates.SolvedValue == 0))
                     {
                         Board.SetCellValue(lastCell.CellId, val, Constants.SolvingTechnique.HiddenSingle);
@@ -238,7 +237,7 @@ namespace Sudoku.Core
                 var candidateList = new List<int>() {1, 2, 3, 4, 5, 6, 7, 8, 9};
                 foreach (Cell cell in house.Cells)
                 {
-                    if (cell.Value > 0)
+                    if (cell.IsSolved())
                     {
                         candidateList.Remove(cell.Value);
                     }
@@ -248,7 +247,7 @@ namespace Sudoku.Core
                 foreach (int val in candidateList)
                 {
                     Cell[] cellList = CellsWithThisCandidateArray(house.Cells, val);
-                    if (cellList.Length > 3) continue;
+                    if (cellList.Length > 3 || cellList.Length == 0) continue;
 
                     //Check if each cell in list shares another house
                     int boxNum = cellList[0].BoxNumber;
@@ -430,6 +429,34 @@ namespace Sudoku.Core
             }
 
             return false;
+        }
+
+        private bool BowmanBingo()
+        {
+            //Pick a random candidate in a random cell to test
+            var rnd = new Random();
+            Cell cell = Board.Cells.Where(c => !c.IsSolved()).OrderBy(x => rnd.Next()).FirstOrDefault();
+            if (cell == null) return false;
+            int candidate = cell.Candidates.GetCandidateArray().OrderBy(x => rnd.Next()).FirstOrDefault();
+            if (candidate == 0) return false;
+            //Create new board and attempt to solve
+            var testBoard = new Board(Board);
+            testBoard.SetCellValue(cell.CellId, candidate, Constants.SolvingTechnique.BowmanBingo);
+            var testSolver = new Solver(testBoard);
+            bool solved = testSolver.SolvePuzzle();
+            //If it finds a contradiction, rule out that candidate and return true
+            if (!testBoard.IsCorrectlySolved())
+            {
+                cell.Candidates.EliminateCandidate(candidate);
+                return true;
+            }
+            //If it solves correctly, set cell to candidate value and return true
+            else if (testBoard.IsSolved())
+            {
+                Board.SetCellValue(cell.CellId, candidate, Constants.SolvingTechnique.BowmanBingo);
+                return true;
+            }
+            throw new Exception("How did we get here?");
         }
 
         #endregion

@@ -20,23 +20,14 @@ namespace Sudoku.Core
             
 
             //initialize board
-            for (int i = 0; i < Constants.BoardLength; i++)
-            {
-                Rows[i] = new Row(i+1);
-                Columns[i] = new Column(i+1);
-                Boxes[i] = new Box(i+1);
-                Houses[i*3 + 0] = Rows[i];
-                Houses[i*3 + 1] = Columns[i];
-                Houses[i*3 + 2] = Boxes[i];
-            }
+            InitializeHouses();
 
             for (int i = 0; i < Constants.TotalCellCount; i++)
             {
                 Cells[i] = new Cell(i+1, values[i]);
 
-                Rows[Cells[i].RowNumber - 1].Add(Cells[i]);
-                Columns[Cells[i].ColumnNumber - 1].Add(Cells[i]);
-                Boxes[Cells[i].BoxNumber - 1].Add(Cells[i]);
+                AddCellToHouses(Cells[i]);
+                
             }
 
             //Retrieve solved board if possible
@@ -50,12 +41,45 @@ namespace Sudoku.Core
             }
         }
 
-        public Board SolvedBoard { get; private set; }
+        private void AddCellToHouses(Cell cell)
+        {
+            int i = cell.CellId - 1;
+            Rows[Cells[i].RowNumber - 1].Add(Cells[i]);
+            Columns[Cells[i].ColumnNumber - 1].Add(Cells[i]);
+            Boxes[Cells[i].BoxNumber - 1].Add(Cells[i]);
+        }
+
+        private void InitializeHouses()
+        {
+            for (int i = 0; i < Constants.BoardLength; i++)
+            {
+                Rows[i] = new Row(i + 1);
+                Columns[i] = new Column(i + 1);
+                Boxes[i] = new Box(i + 1);
+                Houses[i*3 + 0] = Rows[i];
+                Houses[i*3 + 1] = Columns[i];
+                Houses[i*3 + 2] = Boxes[i];
+            }
+        }
+
 
         public Board(string valueString) : this(ConvertStringParameter(new Regex("[\\D]").Replace(valueString, "")))
         {
         }
 
+        public Board(Board otherBoard)
+        {
+            if (otherBoard?.Cells[0] == null) return;
+            InitializeHouses();
+            for (int i = 0; i < otherBoard.Cells.Length; i++)
+            {
+                Cells[i] = new Cell(otherBoard.Cells[i]);
+                AddCellToHouses(Cells[i]);
+            }
+            SolvedBoard = new Board(otherBoard.SolvedBoard);
+        }
+
+        public Board SolvedBoard { get; private set; }
         public Cell[] Cells { get; set; } = new Cell[Constants.TotalCellCount];
         public House[] Rows  { get; set; } = new House[Constants.BoardLength];
         public House[] Columns { get; set; } = new House[Constants.BoardLength];
@@ -108,7 +132,7 @@ namespace Sudoku.Core
                 {
                     int cellId = Cell.GetCellId((row + 1 -'A'), col);
                     Cell cell = GetCell(cellId);
-                    if (cell.Value != 0) continue;
+                    if (cell.IsSolved()) continue;
                     CandidateSet candidates = cell.Candidates;
                     candidateStr += $"{col}(";
                     for (int val = 1; val <= 9; val++ )
@@ -127,7 +151,7 @@ namespace Sudoku.Core
         
         public bool IsSolved()
         {
-            return Cells.All(cell => cell.Value != 0) && IsValid();
+            return Cells.All(cell => cell.IsSolved()) && IsValid();
         }
 
         public bool IsValid()
@@ -171,7 +195,7 @@ namespace Sudoku.Core
             {
                 throw new Exception("Tried to change a provided value");
             }
-            if (cell.Value > 0 && (solvingTechnique != Constants.SolvingTechnique.PlayerInput
+            if (cell.IsSolved() && (solvingTechnique != Constants.SolvingTechnique.PlayerInput
                 || (solvingTechnique == Constants.SolvingTechnique.PlayerInput && cell.SolvingTechnique != Constants.SolvingTechnique.PlayerInput)))
             {
                 throw new Exception("Tried to change solved value");
@@ -290,12 +314,33 @@ namespace Sudoku.Core
         /// <returns></returns>
         public bool IsCorrectlySolved()
         {
-            if (SolvedBoard == null) return true;
+            if (Houses.Any(house => !house.IsValid()))
+            {
+                IsProvenInvalid = true;
+                return false;
+            }
+            if (SolvedBoard?.Cells[0] == null) return true;
             for (int i = 0; i < Constants.TotalCellCount; i++)
             {
-                if (!Cells[i].CouldBe(SolvedBoard.Cells[i].Value)) return false;
+                if (!Cells[i].CouldBe(SolvedBoard.Cells[i].Value))
+                {
+                    IsProvenInvalid = true;
+                    return false;
+                }
             }
             return true;
+        }
+
+        public void ResetBoard()
+        {
+            for (int i = 0; i < Cells.Length; i++)
+            {
+                if (Cells[i].SolvingTechnique != Constants.SolvingTechnique.Provided)
+                {
+                    Cells[i] = new Cell(Cells[i].CellId, 0);
+                }
+                
+            }
         }
     }
     

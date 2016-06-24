@@ -12,13 +12,15 @@ namespace Sudoku.ConsoleApp
     {
         public static void Main()
         {
-            UnsolvedUpdater();
+            //UnsolvedUpdater();
+
             //WriteLine("Testing TwoStringKite");
             //Solver.TechniqueHasFalsePositives(Constants.SolvingTechnique.TwoStringKite);
             //WriteLine("Any false positives would have thrown an error.");
             //ReadKey();
+
             //PuzzleImporter();
-            //MainMenu();
+            MainMenu();
         }
 
         private static void UnsolvedUpdater()

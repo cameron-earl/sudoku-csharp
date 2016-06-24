@@ -24,7 +24,10 @@ namespace Sudoku.Core
         public CandidateSet(CandidateSet otherSet)
         {
             SolvedValue = otherSet.SolvedValue;
-            Array.Copy(otherSet.Candidates, Candidates, otherSet.Count());
+            for (int i = 0; i < Candidates.Length; i++)
+            {
+                Candidates[i] = otherSet.Candidates[i];
+            }
         }
         #endregion
 
@@ -86,10 +89,12 @@ namespace Sudoku.Core
             }
             if (count == 0)
             {
-                throw new Exception("A cell was found with zero candidates.");
+                IsValid = false;
             }
             return count;
         }
+
+        public bool IsValid { get; set; } = true;
 
         public bool Contains(int value)
         {
@@ -117,7 +122,7 @@ namespace Sudoku.Core
             int index = val - 1;
             if (Count() == 1 && Candidates[index])
             {
-                throw new Exception($"Tried to eliminate the last valid candidate in a cell. A previously entered value is likely incorrect.");
+                IsValid = false;
             }
 
             //Remove Candidate
@@ -141,15 +146,15 @@ namespace Sudoku.Core
         public int[] GetCandidateArray()
         {
             int[] candArr = new int[Count()];
-            int canditateIndex = 0;
-            for (int i = 0; canditateIndex < Candidates.Length && i < candArr.Length; i++)
+            int candidateIndex = 0;
+            for (int i = 0; candidateIndex < Candidates.Length && i < candArr.Length; i++)
             {
-                while (!Candidates[canditateIndex])
+                while (!Candidates[candidateIndex])
                 {
-                    canditateIndex++;
+                    candidateIndex++;
                 }
-                candArr[i] = canditateIndex + 1;
-                canditateIndex++;
+                candArr[i] = candidateIndex + 1;
+                candidateIndex++;
             }
             return candArr;
         } 

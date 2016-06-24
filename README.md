@@ -21,15 +21,16 @@ This project was started as a way to practice MVC concepts using a Sudoku game a
 <h4>Near Term TODO:</h4>
 <ul>
 	<li>IsValid check on all candidates, cells, houses, and board that builds upward</li>
-	<li>Create a new table for unsolved sudokus</li>
-	<li>Newly solved sudokus in unsolved section will be removed when added to solved database</li>
-	<li>Improve technique testing by testing potential moves against completed board</li>
-	<li>Improve technique testing by creating function that tests it preferentially against all solved boards</li>
-	<li>Add two-string kite technique</li>
+
 </ul>
 
 <h4>Changelog</h4>
 <ul>
 	<li>6/23/16 Complete board entry in consoleapp</li>
     <li>6/23/16 Skyscraper technique as found here: <a href="http://hodoku.sourceforge.net/en/tech_sdp.php">http://hodoku.sourceforge.net/en/tech_sdp.php</a></li>
+	<li>6/23/16 Create a new table for unsolved sudokus</li>
+    <li>6/23/16 Newly solved sudokus in unsolved section will be removed when added to solved database</li>
+    <li>6/24/16 Improve technique testing by testing potential moves against completed board</li>
+    <li>6/24/16 Improve technique testing by creating function that tests it preferentially against all solved boards</li>
+    <li>6/24/16 Add two-string kite technique</li>
 </ul>

@@ -17,6 +17,7 @@ namespace Sudoku.Core
             {
                 throw new ArgumentOutOfRangeException($"Values must be between 0 and {Constants.BoardLength}");
             }
+            
 
             //initialize board
             for (int i = 0; i < Constants.BoardLength; i++)
@@ -38,12 +39,18 @@ namespace Sudoku.Core
                 Boxes[Cells[i].BoxNumber - 1].Add(Cells[i]);
             }
 
+            //Retrieve solved board if possible
+            string solvedBoardString = DBHelper.GetSolvedBoardString(ToSimpleString());
+            if (solvedBoardString != null) SolvedBoard = new Board(solvedBoardString);
+
             //remove impossible candidates in each house
             foreach (House house in Houses)
             {
                 house.UpdateCandidates();
             }
         }
+
+        public Board SolvedBoard { get; private set; }
 
         public Board(string valueString) : this(ConvertStringParameter(new Regex("[\\D]").Replace(valueString, "")))
         {
@@ -85,7 +92,7 @@ namespace Sudoku.Core
             string str = "";
             foreach (House row in Rows)
             {
-                str = row.Cells.Aggregate(str, (current, cell) => current + $"{cell}");
+                str = row.Cells.Aggregate(str, (current, cell) => current + $"{cell.Value}");
                 str += " \n";
             }
             return str;
@@ -275,6 +282,20 @@ namespace Sudoku.Core
         public bool Contains(int val)
         {
             return Rows.Any(row => row.Contains(val));
+        }
+
+        /// <summary>
+        /// Should test current cells against solved board - solved cells match and unsolved cells contain correct candidate
+        /// </summary>
+        /// <returns></returns>
+        public bool IsCorrectlySolved()
+        {
+            if (SolvedBoard == null) return true;
+            for (int i = 0; i < Constants.TotalCellCount; i++)
+            {
+                if (!Cells[i].CouldBe(SolvedBoard.Cells[i].Value)) return false;
+            }
+            return true;
         }
     }
     

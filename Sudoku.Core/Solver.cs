@@ -29,7 +29,6 @@ namespace Sudoku.Core
             for (var method = Constants.SolvingTechnique.NakedSingle; !moveSolved && method <= max; method++)
             {
                 moveSolved = SolveOneMove(method);
-                if (moveSolved) _moveCount[method]++;
             }
             return moveSolved;
         }
@@ -39,11 +38,52 @@ namespace Sudoku.Core
             return _moveCount.Where(i => i.Value > 0).Aggregate("", (current, i) => current + $"{i.Key} - {i.Value}\n");
         }
 
-        private static Cell[] CellsWithThisCandidateArray(IEnumerable<Cell> inList, int candidate)
+        public string GetHardestMove()
         {
-            return inList.Where(cell => cell.Candidates.Contains(candidate)).ToArray();
+            string move = "No good move known.";
+            try
+            {
+                move = _moveCount.Last(i => i.Value > 0).Key.ToString();
+                return move;
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+            return move;
         }
-        
+
+        public static bool TechniqueHasFalsePositives(Constants.SolvingTechnique tech)
+        {
+            IList<Constants.SolvingTechnique> techs = new List<Constants.SolvingTechnique>();
+            techs.Add(Constants.SolvingTechnique.NakedSingle);
+            techs.Add(Constants.SolvingTechnique.HiddenSingle);
+            techs.Add(tech);
+            for (int i = 0; i < 100; i++)
+            {
+                Console.WriteLine(i);
+                var game = new Board(DBHelper.GetChallengingBoard());
+                var solver = new Solver(game);
+                bool changed = true;
+                while (changed)
+                {
+                    foreach (Constants.SolvingTechnique technique in techs)
+                    {
+                        changed = solver.SolveOneMove(technique);
+                        if (!game.IsCorrectlySolved()) throw new Exception();
+                        if (changed) break;
+                    }
+                }
+                if (!solver.GetHardestMove().Equals(tech.ToString()))
+                {
+                    i--;
+                }
+            }
+
+
+            return false;
+        }
+
         /// <summary>
         /// Uses reflection to call a method by the same name as the provided enum
         /// </summary>
@@ -62,6 +102,7 @@ namespace Sudoku.Core
                 throw new Exception(
                     $"There was an attempt to call a solving method ({method}) which hasn't yet been programmed.");
             }
+            if (moveSolved) _moveCount[method]++;
             return moveSolved;
         }
 
@@ -316,12 +357,13 @@ namespace Sudoku.Core
                 if (Board.IsValueSolved(val)) continue;
 
                 IList<IList<House>> rowsAndCols = new List<IList<House>>(2);
-                //Generate lists of rows and cols in which the candidate appears between 2 and tuple times
-                //There must be at least x lines in both the base and cover sets
+                //Generate lists of rows and cols in which the candidate appears exactly twice
+                //There must be at least two in one set for it to work
                 IList<House> rows = (from row in Board.Rows
                                      let count = row.CountCellsWithCandidate(val)
                                      where (count == 2)
                                      select row)
+                                     .OrderBy(a => rnd.Next())
                                      .ToList();
                 if (rows.Count >= 2) rowsAndCols.Add(rows);
 
@@ -330,10 +372,11 @@ namespace Sudoku.Core
                                      let count = col.CountCellsWithCandidate(val)
                                      where (count == 2)
                                      select col)
+                                     .OrderBy(a => rnd.Next())
                                      .ToList();
                 if (cols.Count >= 2) rowsAndCols.Add(cols);
 
-                // Starting randomly with rows or cols, find a basic fish
+                // Starting randomly with rows or cols, find a skyscraper
                 IList<House>[] shuffledRowsAndCols = rowsAndCols.OrderBy(a => rnd.Next()).ToArray();
                 foreach (IList<House> lineSet in shuffledRowsAndCols)
                 {
@@ -352,7 +395,42 @@ namespace Sudoku.Core
             return false;
         }
 
+        private bool TwoStringKite()
+        {
+            //Start with a random candidate
+            var rnd = new Random();
+            int randomValIndex = rnd.Next(9);
+            for (int i = randomValIndex; i < 9 + randomValIndex; i++)
+            {
+                int val = i % 9 + 1;
+                if (Board.IsValueSolved(val)) continue;
+                
+                //Generate lists of rows and cols in which the candidate appears exactly twice
+                //There must be at least 1 line in both the rows and columns
+                IList<House> rows = (from row in Board.Rows
+                                     let count = row.CountCellsWithCandidate(val)
+                                     where (count == 2)
+                                     select row)
+                                     .ToList();
+                if (rows.Count == 0) continue;
 
+
+                IList<House> cols = (from col in Board.Columns
+                                     let count = col.CountCellsWithCandidate(val)
+                                     where (count == 2)
+                                     select col)
+                                     .ToList();
+                if (cols.Count == 0) continue;
+
+                if ((from row in rows from col in cols where CheckForTwoStringKite(val, row, col) select row).Any())
+                {
+                    return true;
+                }
+
+            }
+
+            return false;
+        }
 
         #endregion
 
@@ -523,6 +601,7 @@ namespace Sudoku.Core
                                      let count = row.CountCellsWithCandidate(val)
                                      where (count > 1 && count <= tuple)
                                      select row)
+                                     .OrderBy(a => rnd.Next())
                                      .ToList();
                 if (rows.Count < tuple) continue;
 
@@ -531,6 +610,7 @@ namespace Sudoku.Core
                                      let count = col.CountCellsWithCandidate(val)
                                      where (count > 1 && count <= tuple)
                                      select col)
+                                     .OrderBy(a => rnd.Next())
                                      .ToList();
                 if (cols.Count < tuple) continue;
 
@@ -642,6 +722,56 @@ namespace Sudoku.Core
             // return whether change was made
             return change;
         }
+        
+        private bool CheckForTwoStringKite(int val, House row, House col)
+        {
+            //Get cells of note in row and column
+            IList<Cell> rowCells = row.Cells.Where(cell => cell.CouldBe(val)).ToList();
+            IList<Cell> colCells = col.Cells.Where(cell => cell.CouldBe(val)).ToList();
+
+            //Make sure that none of the cells are the same
+            //Make sure that (only) one combination of cells from row and col share a box and are not the same point
+            int boxCount = 0;
+            int box = -1;
+            IList<Cell> baseCells = new List<Cell>();
+            foreach (Cell rowCell in rowCells)
+            {
+                foreach (Cell colCell in colCells)
+                {
+                    if (rowCell.Equals(colCell)) return false;
+                    if (rowCell.BoxNumber == colCell.BoxNumber)
+                    {
+                        boxCount++;
+                        box = rowCell.BoxNumber;
+                    }
+
+                }
+            }
+            if (boxCount != 1) return false;
+            //Identify end points & cell that can see both
+            int colNum = -1;
+            int rowNum = -1;
+            foreach (Cell rowCell in rowCells)
+            {
+                if (rowCell.BoxNumber != box) colNum = rowCell.ColumnNumber;
+            }
+            foreach (Cell colCell in colCells)
+            {
+                if (colCell.BoxNumber != box) rowNum = colCell.RowNumber;
+            }
+            Cell newCell = Board.GetCell(Cell.GetCellId(rowNum, colNum));
+
+            //if it has this candidate, remove it
+            bool changed = false;
+            if (!newCell.IsSolved() && newCell.CouldBe(val))
+            {
+                changed = newCell.Candidates.EliminateCandidate(val);
+            }
+
+            //return whether a change was made
+            return changed;
+        }
+
         #endregion
 
 
@@ -682,6 +812,7 @@ namespace Sudoku.Core
             return indexes[indexes.Length - 1] <= indexCount && pointer >= 0 ? indexes : new int[indexes.Length];
         }
 
+
         /// <summary>
         /// Returns the last index that is at least two apart from the one after it
         /// Returns -1 if no such index exists (or the pattern for the whole array is arr[i+1} = arr[i]+1)
@@ -696,12 +827,15 @@ namespace Sudoku.Core
                 if (arr[i + 1] - (i + 1) != arr[i] - (i)) return i;
             }
             return -1;
-        } 
+        }
+
+        private static Cell[] CellsWithThisCandidateArray(IEnumerable<Cell> inList, int candidate)
+        {
+            return inList.Where(cell => cell.Candidates.Contains(candidate)).ToArray();
+        }
+
         #endregion
 
-        public string GetHardestMove()
-        {
-            return _moveCount.Last(i => i.Value > 0).Key.ToString();
-        }
+        
     }
 }

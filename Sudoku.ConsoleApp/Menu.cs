@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+using Sudoku.Core;
 using static System.Console;
 
 namespace Sudoku.ConsoleApp
@@ -49,8 +50,8 @@ namespace Sudoku.ConsoleApp
                 else
                 {
                     WriteLine("Input invalid, please enter one of the following:");
-                    var count = 0;
-                    for (var c = '0'; c < 'z'; c++)
+                    int count = 0;
+                    for (char c = '0'; c < 'z'; c++)
                     {
                         if (!r.IsMatch($"{c}")) continue;
                         if (count > 0)
@@ -82,6 +83,28 @@ namespace Sudoku.ConsoleApp
             ForegroundColor = ConsoleColor.White;
             WriteLine(heading);
             ResetColor();
+        }
+
+        public static string GetBoardInput()
+        {
+            bool isValid = false;
+            string boardStr = "";
+            while (!isValid)
+            {
+                WriteLine("Please enter a Sudoku puzzle. There should be 81 numbers, with blanks represented as zeroes.");
+                string rawInput = ReadLine() + "";
+                boardStr = new Regex("[\\D]").Replace(rawInput, "");
+                if (boardStr.Length == 81) isValid = true;
+            }
+
+            if (!Board.IsValidPuzzle(boardStr))
+            {
+                boardStr = null;
+                WriteLine("The board you entered is invalid. Try again.");
+            }
+
+            return boardStr;
+
         }
     }
 }

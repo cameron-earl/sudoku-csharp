@@ -156,5 +156,12 @@ namespace Sudoku.Core
                     || ColumnNumber == otherCell.ColumnNumber
                     || BoxNumber == otherCell.BoxNumber);
         }
+
+        public override bool Equals( object obj)
+        {
+            if (GetType() != obj.GetType()) return false;
+            var otherCell = (Cell) obj;
+            return CellId == otherCell.CellId;
+        }
     }
 }

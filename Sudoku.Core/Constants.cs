@@ -26,7 +26,8 @@ namespace Sudoku.Core
             NakedQuad, // Four cells in the same house have only four candidates between them, eliminating those candidates from the rest of the house
             HiddenQuad, // Four candidates can only be found in four cells of the same house, eliminating all other candidates in those three cells
             XWing, // For a certain candidate, pick two lines (base sets) in which all the candidate is in the same two opposing lines (cover sets). Remove candidate from all other cells in the cover sets.
-            Skyscraper, //Taken from Hodoku's Single digit patterns, start like X-wing. But if any two cells from different lines see each other, remove candidate from all cells that see any two cells in the set of four.
+            Skyscraper, //Taken from Hodoku's Single digit patterns, start like X-wing. But if any two cells from different lines see each other, remove candidate from all cells that see both the ends of the chain.
+            TwoStringKite, //Taken from Hodoku's single digit patterns, pick a digit and find a row & column of two candidates each, where a box is shared by a cell from each. Remove from cell that sees both ends.
             //SimpleColoring,
             //YWing,
             SwordFish, // 3-line basic fish (like X-Wing)

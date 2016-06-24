@@ -60,6 +60,7 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="Boards.sql" />
+    <Build Include="UnsolvedBoards.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="Sudoku.DB.refactorlog" />

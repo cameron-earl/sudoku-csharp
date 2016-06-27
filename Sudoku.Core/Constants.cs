@@ -1,3 +1,5 @@
+using System;
+
 namespace Sudoku.Core
 {
     public static class Constants
@@ -13,7 +15,6 @@ namespace Sudoku.Core
         /// </summary>
         public enum SolvingTechnique
         { 
-            Unsolved,
             Provided,
             PlayerInput,
             NakedSingle, // Last unfilled cell in a house
@@ -57,7 +58,33 @@ namespace Sudoku.Core
             //PatternOverlay,
             //QuadForcingChain,
             //Nishio,
-            //BowmanBingo
+            //BowmanBingo,
+            Unsolved
+        }
+
+        public static string GetEasiestMove(string techniqueName1, string techniqueName2)
+        {
+            SolvingTechnique tech1;
+            SolvingTechnique tech2;
+            try
+            {
+                tech1 = (SolvingTechnique)Enum.Parse(typeof(SolvingTechnique), techniqueName1);
+            }
+            catch (Exception)
+            {
+                tech1 = SolvingTechnique.Unsolved;
+            }
+
+            try
+            {
+                tech2 = (SolvingTechnique)Enum.Parse(typeof(SolvingTechnique), techniqueName2);
+            }
+            catch (Exception)
+            {
+                tech2 = SolvingTechnique.Unsolved;
+            }
+
+            return tech1 < tech2 ? tech1.ToString() : tech2.ToString();
         }
     }
 }

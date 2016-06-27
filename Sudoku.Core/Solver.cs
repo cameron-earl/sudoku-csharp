@@ -24,9 +24,9 @@ namespace Sudoku.Core
         public bool SolveEasiestMove()
         {
             bool moveSolved = false;
-            Constants.SolvingTechnique max =
-                Enum.GetValues(typeof(Constants.SolvingTechnique)).Cast<Constants.SolvingTechnique>().Last();
-            for (var method = Constants.SolvingTechnique.NakedSingle; !moveSolved && method <= max; method++)
+            for (var method = Constants.SolvingTechnique.NakedSingle; 
+                    !moveSolved && method < Constants.SolvingTechnique.Unsolved; 
+                    method++)
             {
                 moveSolved = SolveOneMove(method);
             }
@@ -62,7 +62,7 @@ namespace Sudoku.Core
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                var game = new Board(DBHelper.GetChallengingBoard());
+                var game = new Board(DbHelper.GetChallengingBoard());
                 var solver = new Solver(game);
                 bool changed = true;
                 while (changed)

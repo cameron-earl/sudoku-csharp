@@ -31,7 +31,7 @@ namespace Sudoku.Core
             }
 
             //Retrieve solved board if possible
-            string solvedBoardString = DBHelper.GetSolvedBoardString(ToSimpleString());
+            string solvedBoardString = DbHelper.GetSolvedBoardString(ToSimpleString());
             if (solvedBoardString != null) SolvedBoard = new Board(solvedBoardString);
 
             //remove impossible candidates in each house

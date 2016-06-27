@@ -11,6 +11,8 @@ namespace Sudoku.ConsoleApp
     {
         public static void Main()
         {
+            //SolvedUpdater();
+
             //UnsolvedUpdater();
 
             //TestNewTechnique(Constants.SolvingTechnique.XYZWing);
@@ -36,7 +38,7 @@ namespace Sudoku.ConsoleApp
         {
             int newSolveCount = 0;
             int totalUnsolved = 0;
-            using (var conn = new SqlConnection(DBHelper.ConnStr))
+            using (var conn = new SqlConnection(DbHelper.ConnStr))
             {
                 var cmd = new SqlCommand("SELECT Puzzle FROM dbo.UnsolvedBoards", conn);
                 conn.Open();
@@ -49,7 +51,7 @@ namespace Sudoku.ConsoleApp
                         if (new Solver(new Board(boardStr)).SolvePuzzle())
                         {
                             newSolveCount++;
-                            DBHelper.AddBoardToDatabase(boardStr);
+                            DbHelper.UpdateBoardInDatabase(boardStr);
                             Write(".");
                         }
                     }
@@ -69,7 +71,22 @@ namespace Sudoku.ConsoleApp
         /// </summary>
         private static void SolvedUpdater()
         {
-            
+            using (var conn = new SqlConnection(DbHelper.ConnStr))
+            {
+                var cmd = new SqlCommand("SELECT Puzzle FROM dbo.Boards", conn);
+                conn.Open();
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        string boardStr = reader.GetString(0);
+                        DbHelper.UpdateBoardInDatabase(boardStr);
+                    }
+                    conn.Close();
+                }
+            }
+            WriteLine("\nSolved database updated.");
+            ReadKey();
         }
 
         /// <summary>
@@ -85,7 +102,7 @@ namespace Sudoku.ConsoleApp
             {
                 count++;
                 if (count % 500 == 0) WriteLine(count);
-                DBHelper.AddBoardToDatabase(line.Replace(".","0"));
+                DbHelper.UpdateBoardInDatabase(line.Replace(".","0"));
             }
         }
 
@@ -114,16 +131,16 @@ namespace Sudoku.ConsoleApp
                         board = Menu.GetBoardInput();
                         break;
                     case 'b':
-                        board = DBHelper.GetRandomBoard();
+                        board = DbHelper.GetRandomBoard();
                         break;
                     case 'c':
-                        board = DBHelper.GetEasyBoard();
+                        board = DbHelper.GetEasyBoard();
                         break;
                     case 'd':
-                        board = DBHelper.GetChallengingBoard();
+                        board = DbHelper.GetChallengingBoard();
                         break;
                     case 'e':
-                        board = DBHelper.GetUnsolvedBoard();
+                        board = DbHelper.GetUnsolvedBoard();
                         break;
                     case 'x':
                         done = true;
@@ -145,7 +162,7 @@ namespace Sudoku.ConsoleApp
             var testBoard = new Board(boardStr);
             var thisGame = new Game(testBoard);
             thisGame.Play();
-            DBHelper.AddBoardToDatabase(boardStr);
+            DbHelper.UpdateBoardInDatabase(boardStr);
         }
 
         

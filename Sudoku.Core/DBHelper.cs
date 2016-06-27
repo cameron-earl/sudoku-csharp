@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace Sudoku.Core
 {
-    public static class DBHelper
+    public static class DbHelper
     {
         public const string ConnStr =
             "Data Source=(localdb)\\ProjectsV13;Initial Catalog=Sudoku.DB;Integrated Security=True";
@@ -17,7 +17,7 @@ namespace Sudoku.Core
         /// </summary>
         /// <param name="boardStr"></param>
         /// <returns></returns>
-        public static void AddBoardToDatabase(string boardStr) //TODO add logger?
+        public static void UpdateBoardInDatabase(string boardStr) //TODO add logger?
         {
             //Validate input
             boardStr = new Regex("[\\D]").Replace(boardStr, "");
@@ -34,40 +34,46 @@ namespace Sudoku.Core
             var solver = new Solver(b);
             bool isSolved = solver.SolvePuzzle();
             string solvedValues = new Regex("[\\D]").Replace(b.ToSimpleString(), "");
-            string hardestMove = solver.GetHardestMove();
+            string newHardestMove = solver.GetHardestMove();
+            string oldHardestMove = "";
             int unsolvedId = -1;
             int solvedId = -1;
             int timesPlayed = -1;
 
-            //Check databse for matching entries
+            //Check database for matching entries
             using (var conn = new SqlConnection(ConnStr))
             {
                 SqlCommand cmd;
                 //Check solved table for matching entry
+                cmd = new SqlCommand()
+                {
+                    CommandText = $"SELECT TOP 1 Id, HardestMove, TimesPlayed FROM dbo.Boards WHERE Puzzle='{boardStr}'",
+                    Connection = conn
+                };
+                conn.Open();
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        solvedId = reader.GetInt32(0);
+                        oldHardestMove = reader.GetString(1);
+                        timesPlayed = reader.GetInt32(2);
+                    }
+                    conn.Close();
+                }
+
                 if (isSolved)
                 {
-                    cmd = new SqlCommand()
+                    // If it was found in database
+                    if (solvedId >= 1) 
                     {
-                        CommandText = $"SELECT TOP 1 Id, TimesPlayed FROM dbo.Boards WHERE Puzzle='{boardStr}'",
-                        Connection = conn
-                    };
-                    conn.Open();
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            solvedId = reader.GetInt32(0);
-                            timesPlayed = reader.GetInt32(1);
-                        }
-                        conn.Close();
-                    }
-                    
+                        // Update hardest move
+                        newHardestMove = Constants.GetEasiestMove(newHardestMove, oldHardestMove);
 
-                    //Increment TimesPlayed for existing solved table
-                    timesPlayed = (timesPlayed > -1) ? timesPlayed + 1 : timesPlayed;
-                    if (solvedId >= 1)
-                    {
-                        cmd.CommandText = $"UPDATE dbo.Boards SET TimesPlayed = {timesPlayed} WHERE Id = {solvedId}";
+                        //Increment TimesPlayed for existing solved table
+                        timesPlayed = (timesPlayed > -1) ? timesPlayed + 1 : timesPlayed;
+
+                        cmd.CommandText = $"UPDATE dbo.Boards SET HardestMove = '{newHardestMove}', TimesPlayed = {timesPlayed} WHERE Id = {solvedId}";
                         conn.Open();
                         cmd.ExecuteNonQuery();
                         conn.Close();
@@ -110,7 +116,7 @@ namespace Sudoku.Core
                 else if (isSolved && solvedId == -1)
                 {
                     cmd = new SqlCommand(
-                        $"INSERT INTO dbo.Boards (Puzzle, SolvedValues, HardestMove, TimesPlayed) VALUES ('{boardStr}','{solvedValues}','{hardestMove}',1)",
+                        $"INSERT INTO dbo.Boards (Puzzle, SolvedValues, HardestMove, TimesPlayed) VALUES ('{boardStr}','{solvedValues}','{newHardestMove}',1)",
                         conn);
                     cmd.Connection.Open();
                     cmd.ExecuteNonQuery();
@@ -131,7 +137,20 @@ namespace Sudoku.Core
                     //Console.WriteLine("Board removed from unsolved database.");
                     //Console.ReadKey();
                 }
-                
+
+                //Remove from solved table
+                if (!isSolved && solvedId != -1)
+                {
+                    cmd = new SqlCommand(
+                        $"DELETE FROM dbo.Boards WHERE id = {solvedId}",
+                        conn);
+                    cmd.Connection.Open();
+                    cmd.ExecuteNonQuery();
+                    cmd.Connection.Close();
+                    Console.WriteLine($"Board removed from solveDB: {boardStr}");
+                    //Console.ReadKey();
+                }
+
             }
 
         }

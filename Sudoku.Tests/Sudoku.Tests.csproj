@@ -72,6 +72,7 @@
   <ItemGroup>
     <Compile Include="BoardTests.cs" />
     <Compile Include="CandidateSetTests.cs" />
+    <Compile Include="ConstantsTests.cs" />
     <Compile Include="HouseTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SolverTests.cs" />

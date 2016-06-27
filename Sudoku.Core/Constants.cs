@@ -40,7 +40,7 @@ namespace Sudoku.Core
             //UniqueRectangle,
             //HiddenUniqueRectangle,
                 //// ReSharper disable once InconsistentNaming
-            //XYZWing,
+            XYZWing,
             //AlignedPairExclusion,
             //GroupedXCycle,
             //EmptyRectangle,

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Data.SqlClient;
+﻿using System.Data.SqlClient;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -14,7 +13,7 @@ namespace Sudoku.ConsoleApp
         {
             //UnsolvedUpdater();
 
-            //TestNewTechnique(Constants.SolvingTechnique.YWing);
+            //TestNewTechnique(Constants.SolvingTechnique.XYZWing);
 
             //PuzzleImporter();
             MainMenu();
@@ -29,6 +28,10 @@ namespace Sudoku.ConsoleApp
             ReadKey();
         }
 
+        /// <summary>
+        /// Attempts to solve any puzzles in unsolved database, moving them over if successful
+        /// Takes a while because all puzzles require lots of technique attempts
+        /// </summary>
         private static void UnsolvedUpdater()
         {
             int newSolveCount = 0;
@@ -58,6 +61,22 @@ namespace Sudoku.ConsoleApp
             ReadKey();
         }
 
+        /// <summary>
+        /// Will review all puzzles in solved database
+        /// If puzzle is unsolvable, will move to unsolved database
+        /// If hardest move is easier, will update hardest move
+        /// Eventually will score puzzles
+        /// </summary>
+        private static void SolvedUpdater()
+        {
+            
+        }
+
+        /// <summary>
+        /// Used to mine text file where each line is a sudoku board
+        /// Boards are added to appropriate database (solved, unsolved, or none)
+        /// Format can use '0' or '.' for unknown values
+        /// </summary>
         private static void PuzzleImporter()
         {
             string[] lines = File.ReadAllLines(@"C:\Users\cameron.earl\Documents\sudokuboards4.txt", Encoding.UTF8);

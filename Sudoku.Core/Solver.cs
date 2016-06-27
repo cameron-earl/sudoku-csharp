@@ -436,31 +436,13 @@ namespace Sudoku.Core
 
         private bool YWing()
         {
-            //Start with a random candidate
-            var rnd = new Random();
-            int randomValIndex = rnd.Next(9);
-            for (int i = randomValIndex; i < 9 + randomValIndex; i++)
-            {
-                int val = i%9 + 1;
-                if (Board.IsValueSolved(val)) continue;
+            return Wing(false);
+        }
 
-                //Get shuffled list of all cells which contain val and one other candidate
-                IList<Cell> cellsToCheck = Board.Cells
-                    .Where(cell => cell.CouldBe(val) && cell.Candidates.Count() == 2)
-                    .OrderBy(x => rnd.Next())
-                    .ToList();
-                if (cellsToCheck.Count < 2) continue;
-
-                //Check each combination of 2 of these cells
-                int[] indexes = {0, 1};
-                while (indexes[1] != 0)
-                {
-                    Cell[] wingCells = {cellsToCheck[indexes[0]], cellsToCheck[indexes[1]]};
-                    if (CheckForYWing(val, wingCells)) return true;
-                    indexes = GetNextCombination(indexes, cellsToCheck.Count);
-                }
-            }
-            return false;
+        // ReSharper disable once InconsistentNaming
+        private bool XYZWing()
+        {
+            return Wing(true);
         }
 
         //private bool BowmanBingo() //TODO BROKEN
@@ -692,7 +674,37 @@ namespace Sudoku.Core
 
             return false;
         }
-        
+
+        // ReSharper disable once InconsistentNaming
+        private bool Wing(bool isXYZWing)
+        {
+            //Start with a random candidate
+            var rnd = new Random();
+            int randomValIndex = rnd.Next(9);
+            for (int i = randomValIndex; i < 9 + randomValIndex; i++)
+            {
+                int val = i % 9 + 1;
+                if (Board.IsValueSolved(val)) continue;
+
+                //Get shuffled list of all cells which contain val and one other candidate
+                IList<Cell> cellsToCheck = Board.Cells
+                    .Where(cell => cell.CouldBe(val) && cell.Candidates.Count() == 2)
+                    .OrderBy(x => rnd.Next())
+                    .ToList();
+                if (cellsToCheck.Count < 2) continue;
+
+                //Check each combination of 2 of these cells
+                int[] indexes = { 0, 1 };
+                while (indexes[1] != 0)
+                {
+                    Cell[] pincerCells = { cellsToCheck[indexes[0]], cellsToCheck[indexes[1]] };
+                    if (!isXYZWing && CheckForYWing(val, pincerCells)) return true;
+                    if (isXYZWing && CheckForXYZWing(val, pincerCells)) return true;
+                    indexes = GetNextCombination(indexes, cellsToCheck.Count);
+                }
+            }
+            return false;
+        }
 
         /// <summary>
         /// Checks a certain combination of lines for a new fish (of that many lines)
@@ -792,7 +804,7 @@ namespace Sudoku.Core
             //Make sure that (only) one combination of cells from row and col share a box and are not the same point
             int boxCount = 0;
             int box = -1;
-            IList<Cell> baseCells = new List<Cell>();
+            
             foreach (Cell rowCell in rowCells)
             {
                 foreach (Cell colCell in colCells)
@@ -831,13 +843,13 @@ namespace Sudoku.Core
             return changed;
         }
 
-        private bool CheckForYWing(int val, IReadOnlyList<Cell> wingCells)
+        private bool CheckForYWing(int val, IReadOnlyList<Cell> pincerCells)
         {
-            if (wingCells[0].Candidates.Equals(wingCells[1].Candidates)) return false;
+            if (pincerCells[0].Candidates.Equals(pincerCells[1].Candidates)) return false;
             
-            //identify a, b, and c
-            int[] hingeValues = (from wingCell in wingCells
-                                      from candidate in wingCell.Candidates.GetCandidateArray()
+            //identify a & b
+            int[] hingeValues = (from pincerCell in pincerCells
+                                      from candidate in pincerCell.Candidates.GetCandidateArray()
                                       where candidate != val
                                       select candidate)
                                       .ToArray();
@@ -848,7 +860,7 @@ namespace Sudoku.Core
             bool foundHinge = false;
             foreach (Cell cell in Board.Cells)
             {
-                if (cell.CanSee(wingCells[0]) && cell.CanSee(wingCells[1]) && !cell.IsSolved())
+                if (cell.CanSee(pincerCells[0]) && cell.CanSee(pincerCells[1]) && !cell.IsSolved())
                 {
                     if (cell.CouldBe(hingeValues[0]) && cell.CouldBe(hingeValues[1]) && cell.Candidates.Count() == 2)
                     {
@@ -861,6 +873,46 @@ namespace Sudoku.Core
                 }
             }
             if (!foundHinge || seeingCells.Count == 0) return false;
+
+            // Remove candidate from all cells in list
+            foreach (Cell seeingCell in seeingCells)
+            {
+                seeingCell.Candidates.EliminateCandidate(val);
+            }
+            return true;
+        }
+
+        // ReSharper disable once InconsistentNaming
+        private bool CheckForXYZWing(int val, IReadOnlyList<Cell> pincerCells)
+        {
+            if (pincerCells[0].Candidates.Equals(pincerCells[1].Candidates)) return false;
+
+            //identify a & b
+            int[] hingeValues = (from pincerCell in pincerCells
+                                 from candidate in pincerCell.Candidates.GetCandidateArray()
+                                 where candidate != val
+                                 select candidate)
+                                      .ToArray();
+            
+            //find hinge
+            Cell hinge = Board.Cells.FirstOrDefault(cell => cell
+                            .CanSee(pincerCells[0]) 
+                            && cell.CanSee(pincerCells[1]) 
+                            && cell.CouldBe(val) 
+                            && cell.CouldBe(hingeValues[0]) 
+                            && cell.CouldBe(hingeValues[1]) 
+                            && cell.Candidates.Count() == 3);
+            if (hinge == null) return false;
+
+            //find all cells which see all hinge and pincers, have value, and aren't solved
+            IList<Cell> seeingCells = Board.Cells
+                                        .Where(cell => cell.CanSee(pincerCells[0]) 
+                                            && cell.CanSee(pincerCells[1]) 
+                                            && cell.CanSee(hinge) 
+                                            && !cell.IsSolved() 
+                                            && cell.CouldBe(val))
+                                        .ToList();
+            if (seeingCells.Count == 0) return false;
 
             // Remove candidate from all cells in list
             foreach (Cell seeingCell in seeingCells)

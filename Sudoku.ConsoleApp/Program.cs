@@ -14,13 +14,19 @@ namespace Sudoku.ConsoleApp
         {
             //UnsolvedUpdater();
 
-            //WriteLine("Testing TwoStringKite");
-            //Solver.TechniqueHasFalsePositives(Constants.SolvingTechnique.TwoStringKite);
-            //WriteLine("Any false positives would have thrown an error.");
-            //ReadKey();
+            //TestNewTechnique(Constants.SolvingTechnique.YWing);
 
             //PuzzleImporter();
             MainMenu();
+        }
+
+        private static void TestNewTechnique(Constants.SolvingTechnique technique)
+        {
+            WriteLine($"Testing {technique}");
+            bool falsePositives = Solver.TechniqueHasFalsePositives(technique);
+            string str = falsePositives ? "" : "not";
+            WriteLine($"{technique} is {str} throwing false positives");
+            ReadKey();
         }
 
         private static void UnsolvedUpdater()

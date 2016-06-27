@@ -70,7 +70,10 @@ namespace Sudoku.Core
                     foreach (Constants.SolvingTechnique technique in techs)
                     {
                         changed = solver.SolveOneMove(technique);
-                        if (!game.IsCorrectlySolved()) throw new Exception();
+                        if (!game.IsCorrectlySolved() || game.IsProvenInvalid)
+                        {
+                            return true;
+                        }
                         if (changed) break;
                     }
                 }
@@ -431,33 +434,62 @@ namespace Sudoku.Core
             return false;
         }
 
-        private bool BowmanBingo()
+        private bool YWing()
         {
-            //Pick a random candidate in a random cell to test
+            //Start with a random candidate
             var rnd = new Random();
-            Cell cell = Board.Cells.Where(c => !c.IsSolved()).OrderBy(x => rnd.Next()).FirstOrDefault();
-            if (cell == null) return false;
-            int candidate = cell.Candidates.GetCandidateArray().OrderBy(x => rnd.Next()).FirstOrDefault();
-            if (candidate == 0) return false;
-            //Create new board and attempt to solve
-            var testBoard = new Board(Board);
-            testBoard.SetCellValue(cell.CellId, candidate, Constants.SolvingTechnique.BowmanBingo);
-            var testSolver = new Solver(testBoard);
-            bool solved = testSolver.SolvePuzzle();
-            //If it finds a contradiction, rule out that candidate and return true
-            if (!testBoard.IsCorrectlySolved())
+            int randomValIndex = rnd.Next(9);
+            for (int i = randomValIndex; i < 9 + randomValIndex; i++)
             {
-                cell.Candidates.EliminateCandidate(candidate);
-                return true;
+                int val = i%9 + 1;
+                if (Board.IsValueSolved(val)) continue;
+
+                //Get shuffled list of all cells which contain val and one other candidate
+                IList<Cell> cellsToCheck = Board.Cells
+                    .Where(cell => cell.CouldBe(val) && cell.Candidates.Count() == 2)
+                    .OrderBy(x => rnd.Next())
+                    .ToList();
+                if (cellsToCheck.Count < 2) continue;
+
+                //Check each combination of 2 of these cells
+                int[] indexes = {0, 1};
+                while (indexes[1] != 0)
+                {
+                    Cell[] wingCells = {cellsToCheck[indexes[0]], cellsToCheck[indexes[1]]};
+                    if (CheckForYWing(val, wingCells)) return true;
+                    indexes = GetNextCombination(indexes, cellsToCheck.Count);
+                }
             }
-            //If it solves correctly, set cell to candidate value and return true
-            else if (testBoard.IsSolved())
-            {
-                Board.SetCellValue(cell.CellId, candidate, Constants.SolvingTechnique.BowmanBingo);
-                return true;
-            }
-            throw new Exception("How did we get here?");
+            return false;
         }
+
+        //private bool BowmanBingo() //TODO BROKEN
+        //{
+        //    //Pick a random candidate in a random cell to test
+        //    var rnd = new Random();
+        //    Cell cell = Board.Cells.Where(c => !c.IsSolved()).OrderBy(x => rnd.Next()).FirstOrDefault();
+        //    if (cell == null) return false;
+        //    int candidate = cell.Candidates.GetCandidateArray().OrderBy(x => rnd.Next()).FirstOrDefault();
+        //    if (candidate == 0) return false;
+        //    //Create new board and attempt to solve
+        //    var testBoard = new Board(Board);
+        //    testBoard.SetCellValue(cell.CellId, candidate, Constants.SolvingTechnique.BowmanBingo);
+        //    var testSolver = new Solver(testBoard);
+        //    bool solved = testSolver.SolvePuzzle();
+        //    //If it finds a contradiction, rule out that candidate and return true
+        //    if (!testBoard.IsCorrectlySolved())
+        //    {
+        //        cell.Candidates.EliminateCandidate(candidate);
+        //        return true;
+        //    }
+        //    //If it solves correctly, set cell to candidate value and return true
+        //    else if (testBoard.IsSolved())
+        //    {
+        //        Board.SetCellValue(cell.CellId, candidate, Constants.SolvingTechnique.BowmanBingo);
+        //        return true;
+        //    }
+        //    throw new Exception("How did we get here?");
+        //}
 
         #endregion
 
@@ -799,6 +831,45 @@ namespace Sudoku.Core
             return changed;
         }
 
+        private bool CheckForYWing(int val, IReadOnlyList<Cell> wingCells)
+        {
+            if (wingCells[0].Candidates.Equals(wingCells[1].Candidates)) return false;
+            
+            //identify a, b, and c
+            int[] hingeValues = (from wingCell in wingCells
+                                      from candidate in wingCell.Candidates.GetCandidateArray()
+                                      where candidate != val
+                                      select candidate)
+                                      .ToArray();
+
+            //find all cells which see both, could be the shared value, aren't solved
+            //while doing so, look for hinge
+            IList<Cell> seeingCells = new List<Cell>();
+            bool foundHinge = false;
+            foreach (Cell cell in Board.Cells)
+            {
+                if (cell.CanSee(wingCells[0]) && cell.CanSee(wingCells[1]) && !cell.IsSolved())
+                {
+                    if (cell.CouldBe(hingeValues[0]) && cell.CouldBe(hingeValues[1]) && cell.Candidates.Count() == 2)
+                    {
+                        foundHinge = true;
+                    }
+                    else if (cell.CouldBe(val))
+                    {
+                        seeingCells.Add(cell);
+                    }
+                }
+            }
+            if (!foundHinge || seeingCells.Count == 0) return false;
+
+            // Remove candidate from all cells in list
+            foreach (Cell seeingCell in seeingCells)
+            {
+                seeingCell.Candidates.EliminateCandidate(val);
+            }
+            return true;
+        }
+
         #endregion
 
 
@@ -808,8 +879,8 @@ namespace Sudoku.Core
         /// Takes an array with a combination of indexes [0,1,2,3] and properly increments it. [0,1,2,4]
         /// </summary>
         /// <param name="indexes"></param>
-        /// <param name="indexCount"></param>
-        /// <returns>The incrmented array, or all zeroes if that was the last combination</returns>
+        /// <param name="indexCount">Typically "myList.Count"</param>
+        /// <returns>The incremented array, or all zeroes if that was the last combination</returns>
         public static int[] GetNextCombination(int[] indexes, int indexCount)
         {
 

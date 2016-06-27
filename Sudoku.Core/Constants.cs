@@ -29,7 +29,7 @@ namespace Sudoku.Core
             Skyscraper, //Taken from Hodoku's Single digit patterns, start like X-wing. But if any two cells from different lines see each other, remove candidate from all cells that see both the ends of the chain.
             TwoStringKite, //Taken from Hodoku's single digit patterns, pick a digit and find a row & column of two candidates each, where a box is shared by a cell from each. Remove from cell that sees both ends.
             //SimpleColoring,
-            //YWing,
+            YWing, // For a certain candidate, find two cells which contain c and one other candidate, but are different (ac & bc). If any of the cells that see both are ab, remove c from all cells that see both
             SwordFish, // 3-line basic fish (like X-Wing)
             //XCycle,
                 //// ReSharper disable once InconsistentNaming

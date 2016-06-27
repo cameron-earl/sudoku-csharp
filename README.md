@@ -29,6 +29,7 @@ This project was started as a way to practice MVC concepts using a Sudoku game a
 	<li>IsValid check on all candidates, cells, houses, and board that builds upward</li>
 	<li>Add Bowman's Bingo or other brute force solving technique so that all can be solved</li>
 	<li>Add logger which can display solution process or error messages</li>
+	<li>Add method to review database of solved puzzles and update hardestTechnique if easier one is found
 </ul>
 
 <h4>Sudoku-based incremental idea</h4>

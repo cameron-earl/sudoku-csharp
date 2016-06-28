@@ -183,9 +183,8 @@ namespace Sudoku.Core
             return (Cells[cellId - 1]);
         }
 
-        public void SetCellValue(int cellId, int newValue, Constants.SolvingTechnique solvingTechnique)
+        public void SetCellValue(Cell cell, int newValue, Constants.SolvingTechnique solvingTechnique)
         {
-            Cell cell = GetCell(cellId);
             House row = Rows[cell.RowNumber - 1];
             House col = Columns[cell.ColumnNumber - 1];
             House box = Boxes[cell.BoxNumber - 1];
@@ -215,6 +214,12 @@ namespace Sudoku.Core
             row.UpdateCandidates(newValue);
             col.UpdateCandidates(newValue);
             box.UpdateCandidates(newValue);
+        }
+
+        public void SetCellValue(int cellId, int newValue, Constants.SolvingTechnique solvingTechnique)
+        {
+            Cell cell = GetCell(cellId);
+            SetCellValue(cell, newValue, solvingTechnique);
         }
 
         public House[] GetShuffledCopyOfHouseArray()

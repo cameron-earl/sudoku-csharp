@@ -37,7 +37,7 @@ namespace Sudoku.Core
             //XCycle,
                 //// ReSharper disable once InconsistentNaming
             //XYChain,
-            //ThreeMMedusa,
+            //Medusa3D,
             JellyFish, // 4-line basic fish
             //AvoidableRectangle,
             //UniqueRectangle,

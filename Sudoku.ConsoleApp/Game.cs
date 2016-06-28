@@ -232,7 +232,7 @@ namespace Sudoku.ConsoleApp
             {
                 return;
             }
-            Board.SetCellValue(cell.CellId,newValue,Constants.SolvingTechnique.PlayerInput);
+            Board.SetCellValue(cell, newValue, Constants.SolvingTechnique.PlayerInput);
         }
 
         private int GetValueInput()
@@ -240,7 +240,7 @@ namespace Sudoku.ConsoleApp
             PrepareMenu();
             Menu.PrintHeading("What should the new value be?");
             WriteLine("\t(enter 0 to erase or -1 to cancel)");
-            var input = Menu.GetIntInput(-1, Constants.BoardLength);
+            int input = Menu.GetIntInput(-1, Constants.BoardLength);
             return input;
         }
 

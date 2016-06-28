@@ -11,16 +11,17 @@ namespace Sudoku.ConsoleApp
     {
         public static void Main()
         {
-            SolvedUpdater();
+            //SolvedUpdater();
 
             //UnsolvedUpdater();
 
-            //TestNewTechnique(Constants.SolvingTechnique.SimpleColoring);
+            TestNewTechnique(Constants.SolvingTechnique.XYZWing);
 
             //PuzzleImporter();
             //MainMenu();
         }
 
+        // ReSharper disable once UnusedMember.Local
         private static void TestNewTechnique(Constants.SolvingTechnique technique)
         {
             WriteLine($"Testing {technique}");
@@ -34,6 +35,7 @@ namespace Sudoku.ConsoleApp
         /// Attempts to solve any puzzles in unsolved database, moving them over if successful
         /// Takes a while because all puzzles require lots of technique attempts
         /// </summary>
+        // ReSharper disable once UnusedMember.Local
         private static void UnsolvedUpdater()
         {
             int newSolveCount = 0;
@@ -94,6 +96,7 @@ namespace Sudoku.ConsoleApp
         /// Boards are added to appropriate database (solved, unsolved, or none)
         /// Format can use '0' or '.' for unknown values
         /// </summary>
+        // ReSharper disable once UnusedMember.Local
         private static void PuzzleImporter()
         {
             string[] lines = File.ReadAllLines(@"C:\Users\cameron.earl\Documents\sudokuboards4.txt", Encoding.UTF8);
@@ -106,6 +109,7 @@ namespace Sudoku.ConsoleApp
             }
         }
 
+        // ReSharper disable once UnusedMember.Local
         private static void MainMenu()
         {
             

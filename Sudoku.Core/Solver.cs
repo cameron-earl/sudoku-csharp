@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 
 namespace Sudoku.Core
 {
@@ -11,6 +12,70 @@ namespace Sudoku.Core
 
         private readonly Dictionary<Constants.SolvingTechnique, int> _moveCount =
             new Dictionary<Constants.SolvingTechnique, int>();
+        private static readonly Random Rnd = new Random();
+        private Cell[] _shuffledCells;
+        private House[] _shuffledHouses;
+        private int[] _shuffledValues;
+        private Cell[] _shuffledUnsolvedCells;
+
+        #endregion
+
+        #region Technique Properties
+        //Everything in this section should be set to null after each successfully used technique.
+        
+        private Cell[] ShuffledCells
+        {
+            get
+            {
+                if (_shuffledCells == null)
+                {
+                    _shuffledCells = Board.Cells.OrderBy(x => Rnd.Next()).ToArray();
+                }
+                return _shuffledCells;
+
+            }
+            set { _shuffledCells = value; }
+        }
+
+        private House[] ShuffledHouses
+        {
+            get
+            {
+                if (_shuffledHouses == null)
+                {
+                    _shuffledHouses = Board.Houses.OrderBy(x => Rnd.Next()).ToArray();
+                }
+                return _shuffledHouses;
+            }
+            set { _shuffledHouses = value; }
+        }
+
+        private int[] ShuffledValues
+        {
+            get
+            {
+                if (_shuffledValues == null)
+                {
+                    _shuffledValues = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }.OrderBy(x => Rnd.Next()).ToArray();
+                }
+                return _shuffledValues;
+            }
+            set { _shuffledValues = value; }
+        }
+
+        private Cell[] ShuffledUnsolvedCells
+        {
+            get
+            {
+                return _shuffledUnsolvedCells ?? 
+                    (_shuffledUnsolvedCells = (from cell in Board.Cells
+                                                where !cell.IsSolved()
+                                                select cell
+                                                ).OrderBy(x => Rnd.Next())
+                                                .ToArray());
+            }
+            set { _shuffledUnsolvedCells = value; }
+        }
 
         #endregion
 
@@ -60,10 +125,22 @@ namespace Sudoku.Core
                 throw new Exception(
                     $"There was an attempt to call a solving method ({method}) which hasn't yet been programmed.");
             }
-            if (moveSolved) _moveCount[method]++;
+            if (moveSolved)
+            {
+                _moveCount[method]++;
+                ResetTechniqueFields();
+            }
             return moveSolved;
         }
 
+        private void ResetTechniqueFields()
+        {
+            ShuffledCells = null;
+            ShuffledUnsolvedCells = null;
+            ShuffledHouses = null;
+            ShuffledValues = null;
+        }
+        
         public bool SolvePuzzle()
         {
             bool changed = true;
@@ -111,16 +188,13 @@ namespace Sudoku.Core
         /// <returns></returns>
         private bool NakedSingle()
         {
+            
             bool changed = false;
-            int randCellIndex = Board.RandomCellId() - 1;
-            for (int i = randCellIndex; !changed && i < Constants.TotalCellCount + randCellIndex; i++)
+            foreach (Cell cell in ShuffledUnsolvedCells)
             {
-                int cellId = i%Constants.TotalCellCount + 1;
-                Cell cell = Board.GetCell(cellId);
+                if (cell.Candidates.SolvedValue == 0) continue;
 
-                if (cell.IsSolved() || cell.Candidates.SolvedValue == 0) continue;
-
-                Board.SetCellValue(cellId, cell.Candidates.SolvedValue, Constants.SolvingTechnique.NakedSingle);
+                Board.SetCellValue(cell, cell.Candidates.SolvedValue, Constants.SolvingTechnique.NakedSingle);
 
                 changed = true;
             }
@@ -133,46 +207,28 @@ namespace Sudoku.Core
         /// <returns></returns>
         private bool HiddenSingle()
         {
-            var rand = new Random();
-
-            int randomHouseIndex = rand.Next(27);
-
-            for (int i = randomHouseIndex; i < Constants.TotalHouseCount + randomHouseIndex; i++)
+            foreach (House house in ShuffledHouses)
             {
-                int houseIndex = i%Constants.TotalHouseCount;
-                House house = Board.Houses[houseIndex];
 
-                int randomCandidateIndex = rand.Next(Constants.BoardLength);
-                for (int j = randomCandidateIndex; j < Constants.BoardLength + randomCandidateIndex; j++)
+                foreach (int val in ShuffledValues)
                 {
-                    int val = j%Constants.BoardLength + 1;
-
                     if (house.Contains(val)) continue;
 
                     int candidateCount = 0;
                     Cell lastCell = null;
-
-                    int randomCellIndex = rand.Next(Constants.BoardLength);
-
-                    for (int k = randomCellIndex;
-                        candidateCount < 2 && k < Constants.BoardLength + randomCellIndex;
-                        k++)
+                    
+                    foreach (Cell cell in house.Cells)
                     {
-                        int cellIndex = k%Constants.BoardLength;
-                        Cell cell = house.Cells[cellIndex];
-                        if (cell.Candidates.Contains(val))
+                        if (cell.CouldBe(val))
                         {
                             candidateCount++;
                             lastCell = cell;
                         }
                     }
 
-                    if (candidateCount == 1
-                        && lastCell != null
-                        && !lastCell.IsSolved()
-                        && (lastCell.Candidates.SolvedValue == val || lastCell.Candidates.SolvedValue == 0))
+                    if (candidateCount == 1  && lastCell != null)
                     {
-                        Board.SetCellValue(lastCell.CellId, val, Constants.SolvingTechnique.HiddenSingle);
+                        Board.SetCellValue(lastCell, val, Constants.SolvingTechnique.HiddenSingle);
                         return true;
                     }
                 }
@@ -209,9 +265,8 @@ namespace Sudoku.Core
         private bool IntersectionRemoval()
         {
             bool changed = false;
-
-            var rnd = new Random();
-            House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
+            
+            House[] houseArray = Board.GetShuffledCopyOfHouseArray(Rnd);
 
             foreach (House house in houseArray)
             {
@@ -330,11 +385,8 @@ namespace Sudoku.Core
         private bool Skyscraper()
         {
             //Start with a random candidate
-            var rnd = new Random();
-            int randomValIndex = rnd.Next(9);
-            for (int i = randomValIndex; i < 9 + randomValIndex; i++)
+            foreach (int val in ShuffledValues)
             {
-                int val = i % 9 + 1;
                 if (Board.IsValueSolved(val)) continue;
 
                 IList<IList<House>> rowsAndCols = new List<IList<House>>(2);
@@ -344,7 +396,7 @@ namespace Sudoku.Core
                                      let count = row.CountCellsWithCandidate(val)
                                      where (count == 2)
                                      select row)
-                                     .OrderBy(a => rnd.Next())
+                                     .OrderBy(a => Rnd.Next())
                                      .ToList();
                 if (rows.Count >= 2) rowsAndCols.Add(rows);
 
@@ -353,12 +405,12 @@ namespace Sudoku.Core
                                      let count = col.CountCellsWithCandidate(val)
                                      where (count == 2)
                                      select col)
-                                     .OrderBy(a => rnd.Next())
+                                     .OrderBy(a => Rnd.Next())
                                      .ToList();
                 if (cols.Count >= 2) rowsAndCols.Add(cols);
 
                 // Starting randomly with rows or cols, find a skyscraper
-                IList<House>[] shuffledRowsAndCols = rowsAndCols.OrderBy(a => rnd.Next()).ToArray();
+                IList<House>[] shuffledRowsAndCols = rowsAndCols.OrderBy(a => Rnd.Next()).ToArray();
                 foreach (IList<House> lineSet in shuffledRowsAndCols)
                 {
                     int[] indexes = Enumerable.Range(0, 2).ToArray();
@@ -379,11 +431,8 @@ namespace Sudoku.Core
         private bool TwoStringKite()
         {
             //Start with a random candidate
-            var rnd = new Random();
-            int randomValIndex = rnd.Next(9);
-            for (int i = randomValIndex; i < 9 + randomValIndex; i++)
+            foreach (int val in ShuffledValues)
             {
-                int val = i % 9 + 1;
                 if (Board.IsValueSolved(val)) continue;
                 
                 //Generate lists of rows and cols in which the candidate appears exactly twice
@@ -427,12 +476,8 @@ namespace Sudoku.Core
         private bool SimpleColoring()
         {
             //start with a random candidate
-            //Start with a random candidate
-            var rnd = new Random();
-            int randomValIndex = rnd.Next(9);
-            for (int i = randomValIndex; i < 9 + randomValIndex; i++)
+            foreach (int val in ShuffledValues)
             {
-                int val = i%9 + 1;
                 if (Board.IsValueSolved(val)) continue;
 
                 //build a complete set of cells in houses that hold candidate exactly twice
@@ -452,7 +497,7 @@ namespace Sudoku.Core
                 }
                 if (!chainSeeds.Any()) continue;
 
-                IList<Cell> shuffledChainSeeds = chainSeeds.OrderBy(x => rnd.Next()).ToList();
+                IList<Cell> shuffledChainSeeds = chainSeeds.OrderBy(x => Rnd.Next()).ToList();
                 while (shuffledChainSeeds.Count >= 1)
                 {
 
@@ -465,7 +510,7 @@ namespace Sudoku.Core
                         for (int j = 0; j < coloringChains.Length; j++)
                         {
                             int otherIndex = (j + 1) % 2;
-                            int[] indexes = { 0, 1 };
+                            int[] indexes = Enumerable.Range(0, 2).ToArray();
                             while (indexes[1] != 0)
                             {
                                 if (coloringChains[j][indexes[0]].CanSee(coloringChains[j][indexes[1]]))
@@ -473,7 +518,7 @@ namespace Sudoku.Core
                                     //solve all cells of the other color
                                     foreach (Cell cell in coloringChains[otherIndex])
                                     {
-                                        Board.SetCellValue(cell.CellId, val, Constants.SolvingTechnique.SimpleColoring);
+                                        Board.SetCellValue(cell, val, Constants.SolvingTechnique.SimpleColoring);
                                     }
                                     return true;
                                 }
@@ -529,8 +574,7 @@ namespace Sudoku.Core
             return false;
         }
 
-
-
+        
         //private bool BowmanBingo() //TODO BROKEN
         //{
         //    //Pick a random candidate in a random cell to test
@@ -560,20 +604,16 @@ namespace Sudoku.Core
         //}
 
         #endregion
-        
+
         #region Technique Helper Methods
 
         //The following methods are generalizations of a type of a group of methods above.
 
         private bool NakedTuple(int tuple)
         {
-            var rnd = new Random();
-
             bool changed = false;
 
-            House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
-
-            foreach (House house in houseArray)
+            foreach (House house in ShuffledHouses)
             {
                 //Get list of house's unsolved candidates ready
                 var candidateList = new List<int>();
@@ -593,12 +633,12 @@ namespace Sudoku.Core
                                        let count = cell.Candidates.Count()
                                        where count > 1 && count <= tuple
                                        select cell
-                    ).OrderBy(x => rnd.Next()).ToList();
+                                        ).OrderBy(x => Rnd.Next()).ToList();
 
                 //If there are less than [tuple] cells in this list, this method is of no use
                 if (cellList.Count < tuple) continue;
 
-                // For each combination of three cells in this list, look for a set with only three unique candidates between them
+                // For each combination of [tuple] cells in this list, look for a set with only [tuple] unique candidates between them
 
                 //create an array of cell indexes {0, 1, 2...}
                 int[] indexes = Enumerable.Range(0, tuple).ToArray();
@@ -648,10 +688,7 @@ namespace Sudoku.Core
         /// <returns></returns>
         private bool HiddenTuple(int tuple)
         {
-            var rnd = new Random();
-            House[] houseArray = Board.GetShuffledCopyOfHouseArray(rnd);
-
-            foreach (House house in houseArray)
+            foreach (House house in ShuffledHouses)
             {
                 //Get list of candidates ready
                 var candidateList = new List<int>();
@@ -717,11 +754,8 @@ namespace Sudoku.Core
         private bool BasicFish(int tuple)
         {
             //Start with a random candidate
-            var rnd = new Random();
-            int randomValIndex = rnd.Next(9);
-            for (int i = randomValIndex; i < 9 + randomValIndex; i++)
+            foreach (int val in ShuffledValues)
             {
-                int val = i % 9 + 1;
                 if (Board.IsValueSolved(val)) continue;
 
                 //Generate lists of rows and cols in which the candidate appears between 2 and tuple times
@@ -730,7 +764,7 @@ namespace Sudoku.Core
                                      let count = row.CountCellsWithCandidate(val)
                                      where (count > 1 && count <= tuple)
                                      select row)
-                                     .OrderBy(a => rnd.Next())
+                                     .OrderBy(a => Rnd.Next())
                                      .ToList();
                 if (rows.Count < tuple) continue;
 
@@ -739,13 +773,13 @@ namespace Sudoku.Core
                                      let count = col.CountCellsWithCandidate(val)
                                      where (count > 1 && count <= tuple)
                                      select col)
-                                     .OrderBy(a => rnd.Next())
+                                     .OrderBy(a => Rnd.Next())
                                      .ToList();
                 if (cols.Count < tuple) continue;
 
                 // Starting randomly with rows or cols, find a basic fish
                 IList<House>[] rowsAndCols = {rows, cols};
-                IList<House>[] shuffledRowsAndCols = rowsAndCols.OrderBy(a => rnd.Next()).ToArray();
+                IList<House>[] shuffledRowsAndCols = rowsAndCols.OrderBy(a => Rnd.Next()).ToArray();
                 foreach (IList<House> lineSet in shuffledRowsAndCols)
                 {
                     int[] indexes = Enumerable.Range(0, tuple).ToArray();
@@ -767,22 +801,18 @@ namespace Sudoku.Core
         private bool Wing(bool isXYZWing)
         {
             //Start with a random candidate
-            var rnd = new Random();
-            int randomValIndex = rnd.Next(9);
-            for (int i = randomValIndex; i < 9 + randomValIndex; i++)
+            foreach (int val in ShuffledValues)
             {
-                int val = i % 9 + 1;
                 if (Board.IsValueSolved(val)) continue;
 
                 //Get shuffled list of all cells which contain val and one other candidate
-                IList<Cell> cellsToCheck = Board.Cells
+                IList<Cell> cellsToCheck = ShuffledUnsolvedCells
                     .Where(cell => cell.CouldBe(val) && cell.Candidates.Count() == 2)
-                    .OrderBy(x => rnd.Next())
                     .ToList();
                 if (cellsToCheck.Count < 2) continue;
 
                 //Check each combination of 2 of these cells
-                int[] indexes = { 0, 1 };
+                int[] indexes = Enumerable.Range(0, 2).ToArray();
                 while (indexes[1] != 0)
                 {
                     Cell[] pincerCells = { cellsToCheck[indexes[0]], cellsToCheck[indexes[1]] };

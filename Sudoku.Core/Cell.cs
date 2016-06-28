@@ -57,11 +57,11 @@ namespace Sudoku.Core
             }
         }
 
-        public int RowNumber { get; private set; }
+        public int RowNumber { get; set; }
 
-        public int ColumnNumber { get; private set; }
+        public int ColumnNumber { get; set; }
 
-        public int BoxNumber { get; private set; }
+        public int BoxNumber { get; set; }
 
         public CandidateSet Candidates { get; set; }
 
@@ -172,10 +172,18 @@ namespace Sudoku.Core
 
         public override bool Equals( object obj)
         {
-            if (GetType() != obj.GetType()) return false;
-            var otherCell = (Cell) obj;
+            return GetType() == obj.GetType() && Equals((Cell) obj);
+        }
+
+        public bool Equals(Cell otherCell)
+        {
             return CellId == otherCell.CellId;
         }
-        
+
+        public override int GetHashCode()
+        {
+            // ReSharper disable once NonReadonlyMemberInGetHashCode
+            return RowNumber ^ ColumnNumber - BoxNumber;
+        }
     }
 }

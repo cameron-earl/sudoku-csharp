@@ -29,7 +29,7 @@ namespace Sudoku.Core
             XWing, // For a certain candidate, pick two lines (base sets) in which all the candidate is in the same two opposing lines (cover sets). Remove candidate from all other cells in the cover sets.
             Skyscraper, //Taken from Hodoku's Single digit patterns, start like X-wing. But if any two cells from different lines see each other, remove candidate from all cells that see both the ends of the chain.
             TwoStringKite, //Taken from Hodoku's single digit patterns, pick a digit and find a row & column of two candidates each, where a box is shared by a cell from each. Remove from cell that sees both ends.
-            //SimpleColoring,
+            SimpleColoring,
             YWing, // For a certain candidate, find two cells which contain c and one other candidate, but are different (ac & bc). If any of the cells that see both are ab, remove c from all cells that see both
             SwordFish, // 3-line basic fish (like X-Wing)
             //XCycle,
@@ -68,7 +68,7 @@ namespace Sudoku.Core
             SolvingTechnique tech2;
             try
             {
-                tech1 = (SolvingTechnique)Enum.Parse(typeof(SolvingTechnique), techniqueName1);
+                tech1 = (SolvingTechnique) Enum.Parse(typeof(SolvingTechnique), techniqueName1);
             }
             catch (Exception)
             {
@@ -77,12 +77,17 @@ namespace Sudoku.Core
 
             try
             {
-                tech2 = (SolvingTechnique)Enum.Parse(typeof(SolvingTechnique), techniqueName2);
+                tech2 = (SolvingTechnique) Enum.Parse(typeof(SolvingTechnique), techniqueName2);
             }
             catch (Exception)
             {
                 tech2 = SolvingTechnique.Unsolved;
             }
+#if (DEBUG && tech1 != tech2)
+            {
+                System.Console.Write(".");
+            }
+#endif
 
             return tech1 < tech2 ? tech1.ToString() : tech2.ToString();
         }

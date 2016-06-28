@@ -13,12 +13,12 @@ namespace Sudoku.ConsoleApp
         {
             //SolvedUpdater();
 
-            //UnsolvedUpdater();
+            UnsolvedUpdater();
 
-            //TestNewTechnique(Constants.SolvingTechnique.XYZWing);
+            //TestNewTechnique(Constants.SolvingTechnique.SimpleColoring);
 
             //PuzzleImporter();
-            MainMenu();
+            //MainMenu();
         }
 
         private static void TestNewTechnique(Constants.SolvingTechnique technique)

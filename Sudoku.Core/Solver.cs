@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 
 namespace Sudoku.Core
@@ -249,21 +250,21 @@ namespace Sudoku.Core
                 //for each candidate, get a list of cells with that candidate
                 foreach (int val in candidateList)
                 {
-                    Cell[] cellList = CellsWithThisCandidateArray(house.Cells, val);
-                    if (cellList.Length > 3 || cellList.Length == 0) continue;
+                    Cell[] cellArr = CellsWithThisCandidateArray(house.Cells, val);
+                    if (cellArr.Length > 3 || cellArr.Length == 0) continue;
 
                     //Check if each cell in list shares another house
-                    int boxNum = cellList[0].BoxNumber;
-                    int rowNum = cellList[0].RowNumber;
-                    int colNum = cellList[0].ColumnNumber;
+                    int boxNum = cellArr[0].BoxNumber;
+                    int rowNum = cellArr[0].RowNumber;
+                    int colNum = cellArr[0].ColumnNumber;
                     bool shareBox = true;
                     bool shareRow = true;
                     bool shareCol = true;
-                    for (int cellIndex = 1; cellIndex < cellList.Length; cellIndex++)
+                    for (int cellIndex = 1; cellIndex < cellArr.Length; cellIndex++)
                     {
-                        shareBox = shareBox && boxNum == cellList[cellIndex].BoxNumber;
-                        shareRow = shareRow && rowNum == cellList[cellIndex].RowNumber;
-                        shareCol = shareCol && colNum == cellList[cellIndex].ColumnNumber;
+                        shareBox = shareBox && boxNum == cellArr[cellIndex].BoxNumber;
+                        shareRow = shareRow && rowNum == cellArr[cellIndex].RowNumber;
+                        shareCol = shareCol && colNum == cellArr[cellIndex].ColumnNumber;
                     }
                     // If less than two are true, exit
                     if (shareBox ? !(shareRow || shareCol) : !(shareRow && shareCol))
@@ -275,7 +276,7 @@ namespace Sudoku.Core
                     {
                         foreach (Cell cell in Board.Boxes[boxNum - 1].Cells)
                         {
-                            if (!cellList.Contains(cell))
+                            if (!cellArr.Contains(cell))
                             {
                                 changed = cell.Candidates.EliminateCandidate(val) || changed;
                             }
@@ -285,7 +286,7 @@ namespace Sudoku.Core
                     {
                         foreach (Cell cell in Board.Rows[rowNum - 1].Cells)
                         {
-                            if (!cellList.Contains(cell))
+                            if (!cellArr.Contains(cell))
                             {
                                 changed = cell.Candidates.EliminateCandidate(val) || changed;
                             }
@@ -295,7 +296,7 @@ namespace Sudoku.Core
                     {
                         foreach (Cell cell in Board.Columns[colNum - 1].Cells)
                         {
-                            if (!cellList.Contains(cell))
+                            if (!cellArr.Contains(cell))
                             {
                                 changed = cell.Candidates.EliminateCandidate(val) || changed;
                             }
@@ -414,7 +415,7 @@ namespace Sudoku.Core
                                      where (count == 2)
                                      select row)
                                      .ToList();
-                if (rows.Count == 0) continue;
+                if (!rows.Any()) continue;
 
 
                 IList<House> cols = (from col in Board.Columns
@@ -422,7 +423,7 @@ namespace Sudoku.Core
                                      where (count == 2)
                                      select col)
                                      .ToList();
-                if (cols.Count == 0) continue;
+                if (!cols.Any()) continue;
 
                 if ((from row in rows from col in cols where CheckForTwoStringKite(val, row, col) select row).Any())
                 {
@@ -444,6 +445,108 @@ namespace Sudoku.Core
         {
             return Wing(true);
         }
+
+        private bool SimpleColoring()
+        {
+            //start with a random candidate
+            //Start with a random candidate
+            var rnd = new Random();
+            int randomValIndex = rnd.Next(9);
+            for (int i = randomValIndex; i < 9 + randomValIndex; i++)
+            {
+                int val = i%9 + 1;
+                if (Board.IsValueSolved(val)) continue;
+
+                //build a complete set of cells in houses that hold candidate exactly twice
+                IList<Cell> chainSeeds = new List<Cell>();
+                foreach (House house in Board.Houses)
+                {
+                    if (house.CountCellsWithCandidate(val) == 2)
+                    {
+                        foreach (Cell cell in house.Cells)
+                        {
+                            if (cell.CouldBe(val) && !chainSeeds.Contains(cell))
+                            {
+                                chainSeeds.Add(cell);
+                            }
+                        }
+                    }
+                }
+                if (!chainSeeds.Any()) continue;
+
+                IList<Cell> shuffledChainSeeds = chainSeeds.OrderBy(x => rnd.Next()).ToList();
+
+                //Use those cells as seeds to build blue and green chains
+                List<Cell>[] coloringChains = BuildColoringChains(shuffledChainSeeds[0], val);
+
+                //Check all cells in each chain to see if any cells can see eachother
+                if (coloringChains[0].Count > 1 && coloringChains[1].Count > 1)
+                {
+                    for (int j = 0; j < coloringChains.Length; j++)
+                    {
+                        int otherIndex = (j + 1) % 2;
+                        int[] indexes = { 0, 1 };
+                        while (indexes[1] != 0)
+                        {
+                            if (coloringChains[j][indexes[0]].CanSee(coloringChains[j][indexes[1]]))
+                            {
+                                //solve all cells of the other color
+                                foreach (Cell cell in coloringChains[otherIndex])
+                                {
+                                    Board.SetCellValue(cell.CellId, val, Constants.SolvingTechnique.SimpleColoring);
+                                }
+                                return true;
+                            }
+
+                            indexes = GetNextCombination(indexes, coloringChains[j].Count);
+                        }
+                    } 
+                }
+
+                //if both are internally consistent, check all other unsolved cells not in a chain if they see cells of both colors. 
+                //if so, remove candidate from cell
+                bool changed = false;
+                foreach (Cell cell in Board.Cells)
+                {
+                    if (cell.IsSolved()
+                        || !cell.CouldBe(val)
+                        || coloringChains[0].Contains(cell)
+                        || coloringChains[1].Contains(cell))
+                    {
+                        continue;
+                    }
+                    //check if the cell can see a cell in both chains
+                    bool sawOne = false;
+                    foreach (Cell chainCell in coloringChains[0])
+                    {
+                        sawOne = cell.CanSee(chainCell) || sawOne;
+                    }
+                    if (sawOne == false) continue;
+                    sawOne = false;
+                    foreach (Cell chainCell in coloringChains[1])
+                    {
+                        sawOne = cell.CanSee(chainCell) || sawOne;
+                    }
+                    if (sawOne == false) continue;
+
+                    //if (Board.SolvedBoard.GetCell(cell.CellId).Value == val) throw new Exception("I was about to do something bad.");
+                    changed = cell.Candidates.EliminateCandidate(val) || changed;
+                }
+                if (changed) return true;
+
+                //if not, remove all cells in blue and green chains from shuffledChainSeeds and start with a new seed
+                foreach (List<Cell> coloringChain in coloringChains)
+                {
+                    foreach (Cell cell in coloringChain)
+                    {
+                        shuffledChainSeeds.Remove(cell);
+                    }
+                }
+            }
+            return false;
+        }
+
+        
 
         //private bool BowmanBingo() //TODO BROKEN
         //{
@@ -872,7 +975,7 @@ namespace Sudoku.Core
                     }
                 }
             }
-            if (!foundHinge || seeingCells.Count == 0) return false;
+            if (!foundHinge || !seeingCells.Any()) return false;
 
             // Remove candidate from all cells in list
             foreach (Cell seeingCell in seeingCells)
@@ -912,7 +1015,7 @@ namespace Sudoku.Core
                                             && !cell.IsSolved() 
                                             && cell.CouldBe(val))
                                         .ToList();
-            if (seeingCells.Count == 0) return false;
+            if (!seeingCells.Any()) return false;
 
             // Remove candidate from all cells in list
             foreach (Cell seeingCell in seeingCells)
@@ -920,6 +1023,64 @@ namespace Sudoku.Core
                 seeingCell.Candidates.EliminateCandidate(val);
             }
             return true;
+        }
+
+        public List<Cell>[] BuildColoringChains(Cell seed, int val)
+        {
+            List<Cell>[] coloringChains = {new List<Cell>(), new List<Cell>() };
+            coloringChains[0].Add(seed);
+            bool changed;
+            do
+            {
+                changed = false;
+                for (int i = 0; i < coloringChains[0].Count; i++)
+                {
+                    Cell cell = coloringChains[0][i];
+                    IList<House> cellHouses = new List<House>();
+                    cellHouses.Add(Board.GetHouse(House.HouseType.Row, cell.RowNumber -1));
+                    cellHouses.Add(Board.GetHouse(House.HouseType.Column, cell.ColumnNumber - 1));
+                    cellHouses.Add(Board.GetHouse(House.HouseType.Box, cell.BoxNumber - 1));
+                    foreach (House house in cellHouses)
+                    {
+                        if (house.CountCellsWithCandidate(val) == 2)
+                        {
+                            foreach (Cell c in house.Cells)
+                            {
+                                if (c.CouldBe(val) && !c.Equals(cell) && !coloringChains[1].Contains(c))
+                                {
+                                    coloringChains[1].Add(c);
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                for (int i = 0; i < coloringChains[1].Count; i++)
+                {
+                    Cell cell = coloringChains[1][i];
+                    IList<House> cellHouses = new List<House>();
+                    cellHouses.Add(Board.GetHouse(House.HouseType.Row, cell.RowNumber - 1));
+                    cellHouses.Add(Board.GetHouse(House.HouseType.Column, cell.ColumnNumber - 1));
+                    cellHouses.Add(Board.GetHouse(House.HouseType.Box, cell.BoxNumber - 1));
+                    foreach (House house in cellHouses)
+                    {
+                        if (house.CountCellsWithCandidate(val) == 2)
+                        {
+                            foreach (Cell c in house.Cells)
+                            {
+                                if (c.CouldBe(val) && !c.Equals(cell) && !coloringChains[0].Contains(c))
+                                {
+                                    coloringChains[0].Add(c);
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+            } while (changed);
+            return coloringChains;
         }
 
         #endregion

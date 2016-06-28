@@ -129,7 +129,7 @@ namespace Sudoku.ConsoleApp
                 WriteLine("  C. Solve the Board (as much as possible)");
                 WriteLine("  D. Print candidates for each cell");
                 WriteLine("  E. Check board for validity");
-                WriteLine("  X. Exit program");
+                WriteLine("  X. Quit this game");
 
                 const string regexStr = "[a-ex]";
                 char choice = Menu.GetCharacterInput(new Regex(regexStr));

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Sudoku.Core;
@@ -116,5 +117,53 @@ namespace Sudoku.Tests
 
         #endregion
 
+        #region BuildColoringChains Tests
+
+        [Test]
+        public static void ShouldBuildColoringChainsCorrectly1()
+        {
+            //arrange - recreate first example puzzle on http://hodoku.sourceforge.net/en/tech_col.php
+            const string boardStr =
+                "214006000 007902004 000407000 001870032 002690000 048021006 420709861 009168000 186240009";
+            var board = new Board(boardStr);
+            board.GetCell("C7").Candidates.EliminateCandidate(9);
+            board.GetCell("C8").Candidates.EliminateCandidate(9);
+            board.GetCell("H7").Candidates.EliminateCandidate(3);
+            board.GetCell("H7").Candidates.EliminateCandidate(5);
+            board.GetCell("H7").Candidates.EliminateCandidate(7);
+            board.GetCell("H8").Candidates.EliminateCandidate(5);
+            board.GetCell("H8").Candidates.EliminateCandidate(7);
+            IList<Cell>[] expected = {new List<Cell>(), new List<Cell>() };
+            expected[0].Add(board.GetCell("A4"));
+            expected[0].Add(board.GetCell("C3"));
+            expected[0].Add(board.GetCell("E6"));
+            expected[0].Add(board.GetCell("F1"));
+            expected[0].Add(board.GetCell("G5"));
+            expected[0].Add(board.GetCell("I7"));
+            expected[1].Add(board.GetCell("F4"));
+            expected[1].Add(board.GetCell("G3"));
+            expected[1].Add(board.GetCell("H9"));
+            expected[1].Add(board.GetCell("I6"));
+            var sut = new Solver(board);
+
+            //act
+            List<Cell>[] actual = sut.BuildColoringChains(board.GetCell("A4"), 3);
+
+            //assert
+            Assert.That(actual[0].Count, Is.EqualTo(actual[0].Count));
+            Assert.That(actual[1].Count, Is.EqualTo(actual[1].Count));
+            Assert.That(actual[0].Contains(expected[0][0]));
+            Assert.That(actual[0].Contains(expected[0][1]));
+            Assert.That(actual[0].Contains(expected[0][2]));
+            Assert.That(actual[0].Contains(expected[0][3]));
+            Assert.That(actual[0].Contains(expected[0][4]));
+            Assert.That(actual[0].Contains(expected[0][5]));
+            Assert.That(actual[1].Contains(expected[1][0]));
+            Assert.That(actual[1].Contains(expected[1][1]));
+            Assert.That(actual[1].Contains(expected[1][2]));
+            Assert.That(actual[1].Contains(expected[1][3]));
+        }
+
+        #endregion
     }
 }

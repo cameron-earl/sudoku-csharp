@@ -79,7 +79,7 @@ namespace Sudoku.Core
             SolvedBoard = new Board(otherBoard.SolvedBoard);
         }
 
-        public Board SolvedBoard { get; private set; }
+        public Board SolvedBoard { get; }
         public Cell[] Cells { get; set; } = new Cell[Constants.TotalCellCount];
         public House[] Rows  { get; set; } = new House[Constants.BoardLength];
         public House[] Columns { get; set; } = new House[Constants.BoardLength];

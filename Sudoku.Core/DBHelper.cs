@@ -43,9 +43,8 @@ namespace Sudoku.Core
             //Check database for matching entries
             using (var conn = new SqlConnection(ConnStr))
             {
-                SqlCommand cmd;
                 //Check solved table for matching entry
-                cmd = new SqlCommand()
+                var cmd = new SqlCommand()
                 {
                     CommandText = $"SELECT TOP 1 Id, HardestMove, TimesPlayed FROM dbo.Boards WHERE Puzzle='{boardStr}'",
                     Connection = conn
@@ -162,7 +161,7 @@ namespace Sudoku.Core
             {
                 var cmd = new SqlCommand()
                 {
-                    CommandText = $"SELECT TOP 1 Puzzle FROM dbo.UnsolvedBoards ORDER BY NEWID()",
+                    CommandText = "SELECT TOP 1 Puzzle FROM dbo.UnsolvedBoards ORDER BY NEWID()",
                     Connection = conn
                 };
                 conn.Open();
@@ -248,7 +247,7 @@ namespace Sudoku.Core
             return boardStr;
         }
 
-        public static string GetSolvedBoardString(string puzzle) //TODO always returns null
+        public static string GetSolvedBoardString(string puzzle)
         {
             puzzle = new Regex("[\\D]").Replace(puzzle, "");
             string solvedBoardString = null;

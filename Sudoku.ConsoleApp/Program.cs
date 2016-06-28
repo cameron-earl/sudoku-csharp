@@ -11,9 +11,9 @@ namespace Sudoku.ConsoleApp
     {
         public static void Main()
         {
-            //SolvedUpdater();
+            SolvedUpdater();
 
-            UnsolvedUpdater();
+            //UnsolvedUpdater();
 
             //TestNewTechnique(Constants.SolvingTechnique.SimpleColoring);
 

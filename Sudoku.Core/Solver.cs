@@ -1,16 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Reflection;
 
 namespace Sudoku.Core
 {
     public class Solver
     {
+        #region Fields
+
         private readonly Dictionary<Constants.SolvingTechnique, int> _moveCount =
             new Dictionary<Constants.SolvingTechnique, int>();
 
+        #endregion
+
+        #region Constructors
         public Solver(Board board)
         {
             Board = board;
@@ -18,76 +22,26 @@ namespace Sudoku.Core
             {
                 if (method > Constants.SolvingTechnique.Provided) _moveCount.Add(method, 0);
             }
-        }
+        } 
+        #endregion
 
+        #region Properties
         public Board Board { get; set; }
+        #endregion
 
+        #region Action/Solving Methods
         public bool SolveEasiestMove()
         {
             bool moveSolved = false;
-            for (var method = Constants.SolvingTechnique.NakedSingle; 
-                    !moveSolved && method < Constants.SolvingTechnique.Unsolved; 
+            for (var method = Constants.SolvingTechnique.NakedSingle;
+                    !moveSolved && method < Constants.SolvingTechnique.Unsolved;
                     method++)
             {
                 moveSolved = SolveOneMove(method);
             }
             return moveSolved;
         }
-
-        public string MoveCountsToString()
-        {
-            return _moveCount.Where(i => i.Value > 0).Aggregate("", (current, i) => current + $"{i.Key} - {i.Value}\n");
-        }
-
-        public string GetHardestMove()
-        {
-            string move = "No good move known.";
-            try
-            {
-                move = _moveCount.Last(i => i.Value > 0).Key.ToString();
-                return move;
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
-            return move;
-        }
-
-        public static bool TechniqueHasFalsePositives(Constants.SolvingTechnique tech)
-        {
-            IList<Constants.SolvingTechnique> techs = new List<Constants.SolvingTechnique>();
-            techs.Add(Constants.SolvingTechnique.NakedSingle);
-            techs.Add(Constants.SolvingTechnique.HiddenSingle);
-            techs.Add(tech);
-            for (int i = 0; i < 100; i++)
-            {
-                Console.WriteLine(i);
-                var game = new Board(DbHelper.GetChallengingBoard());
-                var solver = new Solver(game);
-                bool changed = true;
-                while (changed)
-                {
-                    foreach (Constants.SolvingTechnique technique in techs)
-                    {
-                        changed = solver.SolveOneMove(technique);
-                        if (!game.IsCorrectlySolved() || game.IsProvenInvalid)
-                        {
-                            return true;
-                        }
-                        if (changed) break;
-                    }
-                }
-                if (!solver.GetHardestMove().Equals(tech.ToString()))
-                {
-                    i--;
-                }
-            }
-
-
-            return false;
-        }
-
+        
         /// <summary>
         /// Uses reflection to call a method by the same name as the provided enum
         /// </summary>
@@ -99,7 +53,7 @@ namespace Sudoku.Core
             try
             {
                 MethodInfo theMethod = GetType().GetMethod($"{method}", BindingFlags.NonPublic | BindingFlags.Instance);
-                moveSolved = (bool) theMethod.Invoke(this, null);
+                moveSolved = (bool)theMethod.Invoke(this, null);
             }
             catch (Exception)
             {
@@ -119,7 +73,31 @@ namespace Sudoku.Core
                 changed = SolveEasiestMove();
             }
             return Board.IsSolved();
+        } 
+        #endregion
+        
+        #region Diagnostic Methods
+
+        //The following methods are useful in analyzing the puzzle's current state
+
+        public string MoveCountsToString()
+        {
+            return _moveCount.Where(i => i.Value > 0).Aggregate("", (current, i) => current + $"{i.Key} - {i.Value}\n");
         }
+
+        public string GetHardestMove()
+        {
+            try
+            {
+                return _moveCount.Last(i => i.Value > 0).Key.ToString();
+            }
+            catch (Exception)
+            {
+                return "No good move known.";
+            }
+        }
+
+        #endregion
 
         #region Named Solving Techniques
 
@@ -475,78 +453,83 @@ namespace Sudoku.Core
                 if (!chainSeeds.Any()) continue;
 
                 IList<Cell> shuffledChainSeeds = chainSeeds.OrderBy(x => rnd.Next()).ToList();
-
-                //Use those cells as seeds to build blue and green chains
-                List<Cell>[] coloringChains = BuildColoringChains(shuffledChainSeeds[0], val);
-
-                //Check all cells in each chain to see if any cells can see eachother
-                if (coloringChains[0].Count > 1 && coloringChains[1].Count > 1)
+                while (shuffledChainSeeds.Count >= 1)
                 {
-                    for (int j = 0; j < coloringChains.Length; j++)
-                    {
-                        int otherIndex = (j + 1) % 2;
-                        int[] indexes = { 0, 1 };
-                        while (indexes[1] != 0)
-                        {
-                            if (coloringChains[j][indexes[0]].CanSee(coloringChains[j][indexes[1]]))
-                            {
-                                //solve all cells of the other color
-                                foreach (Cell cell in coloringChains[otherIndex])
-                                {
-                                    Board.SetCellValue(cell.CellId, val, Constants.SolvingTechnique.SimpleColoring);
-                                }
-                                return true;
-                            }
 
-                            indexes = GetNextCombination(indexes, coloringChains[j].Count);
+                    //Use those cells as seeds to build blue and green chains
+                    List<Cell>[] coloringChains = BuildColoringChains(shuffledChainSeeds[0], val);
+
+                    //Check all cells in each chain to see if any cells can see eachother
+                    if (coloringChains[0].Count > 1 && coloringChains[1].Count > 1)
+                    {
+                        for (int j = 0; j < coloringChains.Length; j++)
+                        {
+                            int otherIndex = (j + 1) % 2;
+                            int[] indexes = { 0, 1 };
+                            while (indexes[1] != 0)
+                            {
+                                if (coloringChains[j][indexes[0]].CanSee(coloringChains[j][indexes[1]]))
+                                {
+                                    //solve all cells of the other color
+                                    foreach (Cell cell in coloringChains[otherIndex])
+                                    {
+                                        Board.SetCellValue(cell.CellId, val, Constants.SolvingTechnique.SimpleColoring);
+                                    }
+                                    return true;
+                                }
+
+                                indexes = GetNextCombination(indexes, coloringChains[j].Count);
+                            }
+                        }
+                    }
+
+                    //if both are internally consistent, check all other unsolved cells not in a chain if they see cells of both colors. 
+                    //if so, remove candidate from cell
+                    bool changed = false;
+                    foreach (Cell cell in Board.Cells)
+                    {
+                        if (cell.IsSolved()
+                            || !cell.CouldBe(val)
+                            || coloringChains[0].Contains(cell)
+                            || coloringChains[1].Contains(cell))
+                        {
+                            continue;
+                        }
+                        //check if the cell can see a cell in both chains
+                        bool sawOne = false;
+                        for (int index = 0; !sawOne && index < coloringChains[0].Count; index++)
+                        {
+                            Cell chainCell = coloringChains[0][index];
+                            sawOne = cell.CanSee(chainCell);
+                        }
+                        if (sawOne == false) continue;
+                        sawOne = false;
+                        for (int index = 0; !sawOne && index < coloringChains[1].Count; index++)
+                        {
+                            Cell chainCell = coloringChains[1][index];
+                            sawOne = cell.CanSee(chainCell);
+                        }
+                        if (sawOne == false) continue;
+
+                        //if (Board.SolvedBoard.GetCell(cell.CellId).Value == val) throw new Exception("I was about to do something bad.");
+                        changed = cell.Candidates.EliminateCandidate(val) || changed;
+                    }
+                    if (changed) return true;
+
+                    //if not, remove all cells in blue and green chains from shuffledChainSeeds and start with a new seed
+                    foreach (List<Cell> coloringChain in coloringChains)
+                    {
+                        foreach (Cell cell in coloringChain)
+                        {
+                            shuffledChainSeeds.Remove(cell);
                         }
                     } 
-                }
-
-                //if both are internally consistent, check all other unsolved cells not in a chain if they see cells of both colors. 
-                //if so, remove candidate from cell
-                bool changed = false;
-                foreach (Cell cell in Board.Cells)
-                {
-                    if (cell.IsSolved()
-                        || !cell.CouldBe(val)
-                        || coloringChains[0].Contains(cell)
-                        || coloringChains[1].Contains(cell))
-                    {
-                        continue;
-                    }
-                    //check if the cell can see a cell in both chains
-                    bool sawOne = false;
-                    foreach (Cell chainCell in coloringChains[0])
-                    {
-                        sawOne = cell.CanSee(chainCell) || sawOne;
-                    }
-                    if (sawOne == false) continue;
-                    sawOne = false;
-                    foreach (Cell chainCell in coloringChains[1])
-                    {
-                        sawOne = cell.CanSee(chainCell) || sawOne;
-                    }
-                    if (sawOne == false) continue;
-
-                    //if (Board.SolvedBoard.GetCell(cell.CellId).Value == val) throw new Exception("I was about to do something bad.");
-                    changed = cell.Candidates.EliminateCandidate(val) || changed;
-                }
-                if (changed) return true;
-
-                //if not, remove all cells in blue and green chains from shuffledChainSeeds and start with a new seed
-                foreach (List<Cell> coloringChain in coloringChains)
-                {
-                    foreach (Cell cell in coloringChain)
-                    {
-                        shuffledChainSeeds.Remove(cell);
-                    }
                 }
             }
             return false;
         }
 
-        
+
 
         //private bool BowmanBingo() //TODO BROKEN
         //{
@@ -577,9 +560,11 @@ namespace Sudoku.Core
         //}
 
         #endregion
+        
+        #region Technique Helper Methods
 
         //The following methods are generalizations of a type of a group of methods above.
-        #region Helper Methods
+
         private bool NakedTuple(int tuple)
         {
             var rnd = new Random();
@@ -859,7 +844,7 @@ namespace Sudoku.Core
             return change;
         }
 
-        private bool CheckForSkyscraper(int val, IEnumerable<House> chosenLines) //TODO false positives
+        private bool CheckForSkyscraper(int val, IEnumerable<House> chosenLines)
         {
             bool change = false;
             
@@ -1084,8 +1069,7 @@ namespace Sudoku.Core
         }
 
         #endregion
-
-
+        
         #region Static Methods
 
         /// <summary>
@@ -1145,8 +1129,41 @@ namespace Sudoku.Core
             return inList.Where(cell => cell.Candidates.Contains(candidate)).ToArray();
         }
 
-        #endregion
+        public static bool TechniqueHasFalsePositives(Constants.SolvingTechnique tech)
+        {
+            IList<Constants.SolvingTechnique> techs = new List<Constants.SolvingTechnique>();
+            techs.Add(Constants.SolvingTechnique.NakedSingle);
+            techs.Add(Constants.SolvingTechnique.HiddenSingle);
+            techs.Add(tech);
+            for (int i = 0; i < 100; i++)
+            {
+                Console.WriteLine(i);
+                var game = new Board(DbHelper.GetChallengingBoard());
+                var solver = new Solver(game);
+                bool changed = true;
+                while (changed)
+                {
+                    foreach (Constants.SolvingTechnique technique in techs)
+                    {
+                        changed = solver.SolveOneMove(technique);
+                        if (!game.IsCorrectlySolved() || game.IsProvenInvalid)
+                        {
+                            return true;
+                        }
+                        if (changed) break;
+                    }
+                }
+                if (!solver.GetHardestMove().Equals(tech.ToString()))
+                {
+                    i--;
+                }
+            }
 
+
+            return false;
+        }
+
+        #endregion
         
     }
 }

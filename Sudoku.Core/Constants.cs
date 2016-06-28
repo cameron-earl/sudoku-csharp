@@ -1,3 +1,5 @@
+#define DEBUG
+
 using System;
 
 namespace Sudoku.Core
@@ -83,6 +85,7 @@ namespace Sudoku.Core
             {
                 tech2 = SolvingTechnique.Unsolved;
             }
+
 #if (DEBUG && tech1 != tech2)
             {
                 System.Console.Write(".");

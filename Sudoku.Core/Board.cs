@@ -192,20 +192,20 @@ namespace Sudoku.Core
             //Validate move legality
             if (cell.SolvingTechnique == Constants.SolvingTechnique.Provided)
             {
-                throw new Exception("Tried to change a provided value");
+                throw new SolvingException("Tried to change a provided value");
             }
             if (cell.IsSolved() && (solvingTechnique != Constants.SolvingTechnique.PlayerInput
                 || (solvingTechnique == Constants.SolvingTechnique.PlayerInput && cell.SolvingTechnique != Constants.SolvingTechnique.PlayerInput)))
             {
-                throw new Exception("Tried to change solved value");
+                throw new SolvingException("Tried to change solved value");
             }
             if (newValue > 0 && !cell.Candidates.Contains(newValue))
             {
-                throw new Exception("Tried to change value to an eliminated candidate.");
+                throw new SolvingException("Tried to change value to an eliminated candidate.");
             }
             if (row.Contains(newValue) || col.Contains(newValue) || box.Contains(newValue))
             {
-                throw new Exception("New value is already in house.");
+                throw new SolvingException("New value is already in house.");
             }
 
             //Change value and update candidates in its houses

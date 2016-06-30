@@ -90,6 +90,7 @@ namespace Sudoku.Core
             if (count == 0)
             {
                 IsValid = false;
+                throw new SolvingException("No candidates remain in an unsolved cell.");
             }
             return count;
         }
@@ -123,6 +124,7 @@ namespace Sudoku.Core
             if (Count() == 1 && Candidates[index])
             {
                 IsValid = false;
+                throw new SolvingException("Tried to eliminate the last candidate");
             }
 
             //Remove Candidate

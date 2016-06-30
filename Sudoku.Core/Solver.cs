@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
+using System.Runtime.ExceptionServices;
 
 namespace Sudoku.Core
 {
@@ -17,6 +17,7 @@ namespace Sudoku.Core
         private House[] _shuffledHouses;
         private int[] _shuffledValues;
         private Cell[] _shuffledUnsolvedCells;
+        private ExceptionDispatchInfo _exceptionDispatchInfo;
 
         #endregion
 
@@ -120,11 +121,12 @@ namespace Sudoku.Core
                 MethodInfo theMethod = GetType().GetMethod($"{method}", BindingFlags.NonPublic | BindingFlags.Instance);
                 moveSolved = (bool)theMethod.Invoke(this, null);
             }
-            catch (Exception)
+            catch (NullReferenceException)
             {
                 throw new Exception(
                     $"There was an attempt to call a solving method ({method}) which hasn't yet been programmed.");
             }
+            _exceptionDispatchInfo?.Throw();
             if (moveSolved)
             {
                 _moveCount[method]++;
@@ -150,7 +152,39 @@ namespace Sudoku.Core
                 changed = SolveEasiestMove();
             }
             return Board.IsSolved();
-        } 
+        }
+
+        private bool EliminateCandidate(Cell cell, int val)
+        {
+            bool changed;
+            try
+            {
+                changed = cell.Candidates.EliminateCandidate(val);
+            }
+            catch (SolvingException ex)
+            {
+                changed = false;
+                _exceptionDispatchInfo = ExceptionDispatchInfo.Capture(ex);
+            }
+            return changed;
+        }
+
+        private bool SetCellValue(Cell cell, int val, Constants.SolvingTechnique technique)
+        {
+            bool changed;
+            try
+            {
+                Board.SetCellValue(cell, val, technique);
+                changed = true;
+            }
+            catch (SolvingException ex)
+            {
+                changed = false;
+                _exceptionDispatchInfo = ExceptionDispatchInfo.Capture(ex);
+            }
+            return changed;
+        }
+
         #endregion
         
         #region Diagnostic Methods
@@ -194,7 +228,7 @@ namespace Sudoku.Core
             {
                 if (cell.Candidates.SolvedValue == 0) continue;
 
-                Board.SetCellValue(cell, cell.Candidates.SolvedValue, Constants.SolvingTechnique.NakedSingle);
+                SetCellValue(cell, cell.Candidates.SolvedValue, Constants.SolvingTechnique.NakedSingle);
 
                 changed = true;
             }
@@ -228,7 +262,7 @@ namespace Sudoku.Core
 
                     if (candidateCount == 1  && lastCell != null)
                     {
-                        Board.SetCellValue(lastCell, val, Constants.SolvingTechnique.HiddenSingle);
+                        SetCellValue(lastCell, val, Constants.SolvingTechnique.HiddenSingle);
                         return true;
                     }
                 }
@@ -311,7 +345,7 @@ namespace Sudoku.Core
                         {
                             if (!cellArr.Contains(cell))
                             {
-                                changed = cell.Candidates.EliminateCandidate(val) || changed;
+                                changed = EliminateCandidate(cell, val) || changed;
                             }
                         }
                     }
@@ -321,7 +355,7 @@ namespace Sudoku.Core
                         {
                             if (!cellArr.Contains(cell))
                             {
-                                changed = cell.Candidates.EliminateCandidate(val) || changed;
+                                changed = EliminateCandidate(cell, val) || changed;
                             }
                         }
                     }
@@ -331,7 +365,7 @@ namespace Sudoku.Core
                         {
                             if (!cellArr.Contains(cell))
                             {
-                                changed = cell.Candidates.EliminateCandidate(val) || changed;
+                                changed = EliminateCandidate(cell, val) || changed;
                             }
                         }
                     }
@@ -518,7 +552,7 @@ namespace Sudoku.Core
                                     //solve all cells of the other color
                                     foreach (Cell cell in coloringChains[otherIndex])
                                     {
-                                        Board.SetCellValue(cell, val, Constants.SolvingTechnique.SimpleColoring);
+                                        SetCellValue(cell, val, Constants.SolvingTechnique.SimpleColoring);
                                     }
                                     return true;
                                 }
@@ -557,7 +591,7 @@ namespace Sudoku.Core
                         if (sawOne == false) continue;
 
                         //if (Board.SolvedBoard.GetCell(cell.CellId).Value == val) throw new Exception("I was about to do something bad.");
-                        changed = cell.Candidates.EliminateCandidate(val) || changed;
+                        changed = EliminateCandidate(cell, val) || changed;
                     }
                     if (changed) return true;
 
@@ -668,7 +702,7 @@ namespace Sudoku.Core
                         {
                             foreach (int val in candidateSet)
                             {
-                                changed = cell.Candidates.EliminateCandidate(val) || changed;
+                                changed = EliminateCandidate(cell, val) || changed;
                             }
                         }
                         if (changed) return true;
@@ -729,7 +763,7 @@ namespace Sudoku.Core
                             for (int val = 1; val <= Constants.BoardLength; val++)
                             {
                                 if (candidates.Contains(val)) continue;
-                                changed = cell.Candidates.EliminateCandidate(val) || changed;
+                                changed = EliminateCandidate(cell, val) || changed;
                             }
                         }
                         if (changed)
@@ -868,7 +902,7 @@ namespace Sudoku.Core
             // and eliminate that candidate from each cell in the list
             foreach (Cell cell in coverCells)
             {
-                change = cell.Candidates.EliminateCandidate(val) || change;
+                change = EliminateCandidate(cell, val) || change;
             }
             // return whether change was made
             return change;
@@ -906,7 +940,7 @@ namespace Sudoku.Core
             // and eliminate that candidate from each cell in the second list
             foreach (Cell cell in otherCells)
             {
-                change = cell.Candidates.EliminateCandidate(val) || change;
+                change = EliminateCandidate(cell, val) || change;
             }
             // return whether change was made
             return change;
@@ -954,7 +988,7 @@ namespace Sudoku.Core
             bool changed = false;
             if (!newCell.IsSolved() && newCell.CouldBe(val))
             {
-                changed = newCell.Candidates.EliminateCandidate(val);
+                changed = EliminateCandidate(newCell, val);
             }
 
             //return whether a change was made
@@ -995,7 +1029,7 @@ namespace Sudoku.Core
             // Remove candidate from all cells in list
             foreach (Cell seeingCell in seeingCells)
             {
-                seeingCell.Candidates.EliminateCandidate(val);
+                EliminateCandidate(seeingCell, val);
             }
             return true;
         }
@@ -1035,7 +1069,7 @@ namespace Sudoku.Core
             // Remove candidate from all cells in list
             foreach (Cell seeingCell in seeingCells)
             {
-                seeingCell.Candidates.EliminateCandidate(val);
+                EliminateCandidate(seeingCell, val);
             }
             return true;
         }

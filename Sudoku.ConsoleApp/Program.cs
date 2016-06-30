@@ -11,14 +11,14 @@ namespace Sudoku.ConsoleApp
     {
         public static void Main()
         {
-            SolvedUpdater();
+            //SolvedUpdater();
 
-            UnsolvedUpdater();
+            //UnsolvedUpdater();
 
             //TestNewTechnique(Constants.SolvingTechnique.XYZWing);
 
             //PuzzleImporter();
-            //MainMenu();
+            MainMenu();
         }
 
         // ReSharper disable once UnusedMember.Local

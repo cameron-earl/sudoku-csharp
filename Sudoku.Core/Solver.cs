@@ -774,7 +774,7 @@ namespace Sudoku.Core
                 }
 
                 //If there are less than <= tuple candidates, there is nothing to eliminate
-                if (candidateList.Count <= tuple) continue;
+                if (candidateList.Count < tuple) continue;
 
                 //check each combination of the remaining candidates to see if they are in the same cells
                 int[] indexes = Enumerable.Range(0, tuple).ToArray();

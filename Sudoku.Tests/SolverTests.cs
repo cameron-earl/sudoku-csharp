@@ -115,6 +115,19 @@ namespace Sudoku.Tests
             Assert.That(indexes, Is.EqualTo(expected));
         }
 
+        [Test]
+        public void ShouldReturnZeroes3()
+        {
+            //arrange
+            int listSize = 3;
+            int[] indexes = { 1, 2 };
+            int[] expected = { 0, 0 };
+            //act
+            indexes = Solver.GetNextCombination(indexes, listSize);
+            //assert
+            Assert.That(indexes, Is.EqualTo(expected));
+        }
+
         #endregion
 
         #region BuildColoringChains Tests

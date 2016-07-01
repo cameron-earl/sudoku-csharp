@@ -58,7 +58,7 @@ namespace Sudoku.Core
             {
                 if (_shuffledValues == null)
                 {
-                    _shuffledValues = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }.OrderBy(x => Rnd.Next()).ToArray();
+                    _shuffledValues = Enumerable.Range(1, Constants.BoardLength).OrderBy(x => Rnd.Next()).ToArray();
                 }
                 return _shuffledValues;
             }
@@ -610,6 +610,7 @@ namespace Sudoku.Core
             return false;
         }
 
+        // ReSharper disable once InconsistentNaming
         private bool WXYZWing()
         {
             //Start with a random candidate
@@ -617,9 +618,9 @@ namespace Sudoku.Core
             {
                 if (Board.IsValueSolved(val)) continue;
 
-                //Get shuffled list of all cells which contain val and one other candidate
+                //Get shuffled list of all cells which contain val 3 and 1 or 2 other candidates
                 IList<Cell> cellsToCheck = ShuffledUnsolvedCells
-                    .Where(cell => cell.CouldBe(val) && cell.Candidates.Count() == 2)
+                    .Where(cell => cell.CouldBe(val) && !cell.IsSolved() && cell.Candidates.Count() <= 3)
                     .ToList();
                 if (cellsToCheck.Count < 3) continue;
 
@@ -1173,6 +1174,14 @@ namespace Sudoku.Core
         // ReSharper disable once InconsistentNaming
         private bool CheckForWXYZWing(int val, IReadOnlyList<Cell> pincerCells)
         {
+            //verify no pincer cells have identical candidates //TODO necessary?
+            if (pincerCells[0].Candidates.Equals(pincerCells[1].Candidates)
+                || pincerCells[0].Candidates.Equals(pincerCells[2].Candidates)
+                || pincerCells[1].Candidates.Equals(pincerCells[2].Candidates))
+            {
+                return false;
+            }
+
             //identify W, X, and Y
             IList<int> hingeValues = new List<int>();
             foreach (Cell pincerCell in pincerCells)
@@ -1186,24 +1195,35 @@ namespace Sudoku.Core
                 }
             }
             if (hingeValues.Count != 3) return false;
-            
-            //int[] hingeValues = (from pincerCell in pincerCells
-            //                     from candidate in pincerCell.Candidates.GetCandidateArray()
-            //                     where candidate != val
-            //                     select candidate)
-            //                          .ToArray();
-            //if (hingeValues.Length != 3) return false;
+
+            //check for other non-restricted digits // todo
+            foreach (int hingeValue in hingeValues)
+            {
+                int[] indexes = Enumerable.Range(0, 2).ToArray();
+                while (indexes[indexes.Length - 1] > 0)
+                {
+                    Cell cell1 = pincerCells[indexes[0]];
+                    Cell cell2 = pincerCells[indexes[1]];
+                    if (cell1.CouldBe(hingeValue)
+                        && cell2.CouldBe(hingeValue)
+                        && !cell1.CanSee(cell2))
+                    {
+                        return false;
+                    }
+                    indexes = GetNextCombination(indexes, pincerCells.Count);
+                }
+            }
 
             //find hinge
-            Cell hinge = Board.Cells.FirstOrDefault(cell => 
-                            cell.CanSee(pincerCells[0])
-                            && cell.CanSee(pincerCells[1])
-                            && cell.CanSee(pincerCells[2])
-                            && cell.CouldBe(hingeValues[0])
-                            && cell.CouldBe(hingeValues[1])
-                            && cell.CouldBe(hingeValues[2])
-                            && ((cell.Candidates.Count() == 4 && cell.CouldBe(val)) 
-                                || cell.Candidates.Count() == 3));
+            Cell hinge = Board.Cells
+                .FirstOrDefault(cell => cell.CanSee(pincerCells[0])
+                                        && cell.CanSee(pincerCells[1])
+                                        && cell.CanSee(pincerCells[2])
+                                        && cell.CouldBe(hingeValues[0])
+                                        && cell.CouldBe(hingeValues[1])
+                                        && cell.CouldBe(hingeValues[2])
+                                        && ((cell.Candidates.Count() == 4 && cell.CouldBe(val)) 
+                                            || cell.Candidates.Count() == 3));
             if (hinge == null) return false;
 
             //find all cells which see all hinge and pincers, have value, and aren't solved
@@ -1219,6 +1239,7 @@ namespace Sudoku.Core
                                    && cell.CouldBe(val))
                     .ToList();
             }
+            //or just the pincers
             else
             {
                 seeingCells = Board.Cells
@@ -1234,6 +1255,13 @@ namespace Sudoku.Core
             // Remove candidate from all cells in list
             foreach (Cell seeingCell in seeingCells)
             {
+                if (Board.SolvedBoard?.Cells?[0] != null)
+                {
+                    if (Board.SolvedBoard.GetCell(seeingCell.CellId).Value == val)
+                    {
+                        throw new SolvingException("blurg!");
+                    }
+                }
                 EliminateCandidate(seeingCell, val);
             }
             return true;
@@ -1261,10 +1289,9 @@ namespace Sudoku.Core
             //  if no change is made, the set is ruled out
 
 
-            int pointer = 0;
+            int pointer = LastNonConsecutiveIndex(indexes); ;
             while (indexes[indexes.Length - 1] >= indexCount && pointer >= 0)
             {
-                pointer = LastNonConsecutiveIndex(indexes);
                 if (pointer >= 0)
                 {
                     //increment appropriate indexes
@@ -1274,8 +1301,13 @@ namespace Sudoku.Core
                         indexes[i] = indexes[pointer] + (i - pointer);
                     }
                 }
+                pointer = LastNonConsecutiveIndex(indexes);
             }
-            return indexes[indexes.Length - 1] <= indexCount && pointer >= 0 ? indexes : new int[indexes.Length];
+            if (indexes[indexes.Length - 1] >= indexCount)
+            {
+                indexes = new int[indexes.Length];
+            }
+            return indexes;
         }
 
 

@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 using Sudoku.Core;
 
@@ -11,7 +12,7 @@ namespace Sudoku.Tests
         public void ShouldContainValue()
         {
             //arrange
-            var values = new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+            int[] values = Enumerable.Range(0,Constants.BoardLength).ToArray();
             var sut = new Row(1);
             for (int i = 0; i < 9; i++)
             {
@@ -29,7 +30,7 @@ namespace Sudoku.Tests
         public void ShouldNotContainValue()
         {
             //arrange
-            var values = new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+            int[] values = Enumerable.Range(0, Constants.BoardLength).ToArray();
             var sut = new Row(1);
             for (int i = 0; i < 9; i++)
             {
@@ -47,7 +48,7 @@ namespace Sudoku.Tests
         public void ShouldNotContainNegativeValue()
         {
             //arrange
-            var values = new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+            int[] values = Enumerable.Range(0, Constants.BoardLength).ToArray();
             var sut = new Row(1);
             for (int i = 0; i < 9; i++)
             {
@@ -65,7 +66,7 @@ namespace Sudoku.Tests
         public void ShouldNotContainReallyHighValue()
         {
             //arrange
-            var values = new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+            int[] values = Enumerable.Range(0, Constants.BoardLength).ToArray();
             var sut = new Row(1);
             for (int i = 0; i < 9; i++)
             {

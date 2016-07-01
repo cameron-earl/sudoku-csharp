@@ -21,14 +21,11 @@ This project was started as a way to practice MVC concepts using a Sudoku game a
     <li>Change solving process to find all potential moves before doing any, unless specifically solving whole puzzle</li>
 	<li>Better uniqueness tests</li>
 	<li>Method to recognize cheating</li>
-	<li>Method to mine solved database for exemplars for each technique</li>
-	
+	<li>Create self-updating exemplar lists of the 100 puzzles which utilize a technique the most often (for each technique)</li>
 </ul>
 
 <h4>Near-term to-do:</h4>
 <ul>
-	<li>Create objects once per solve loop rather than recreating them in different steps in the same loop</li>
-	<li>Combine and simplify board validating methods</li>
 	<li>Add Bowman's Bingo or other brute force solving technique so that all can be solved</li>
 	<li>Add logger which can display solution process or error messages</li>
 </ul>

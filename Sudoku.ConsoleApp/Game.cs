@@ -140,6 +140,7 @@ namespace Sudoku.ConsoleApp
                         break;
                     case 'b':
                         if (!Solver.SolveEasiestMove()) PrintUnsolvableMessage();
+                        else PrintLastMove();
                         break;
                     case 'c':
                         bool changed = true;
@@ -169,6 +170,11 @@ namespace Sudoku.ConsoleApp
             if (Board.IsSolved()) PrintMessage($"Congratulations! Sudoku solved!\n{Solver.MoveCountsToString()}");
         }
 
+        private void PrintLastMove()
+        {
+            PrintMessage($"Used {Solver.LastMove} technique.");
+        }
+
         private void PrintCandidatesForBoard()
         {
             PrintMessage(Board.CandidatesToString());
@@ -176,11 +182,10 @@ namespace Sudoku.ConsoleApp
 
         private void PrintUnsolvableMessage()
         {
-            Board.IsCorrectlySolved();
-            if (Board.IsProvenInvalid)
+            if (!Board.IsValid() || Board.IsInvalidatedBySolvedBoard())
             {
-                PrintMessage($"Somewhere along the line a bad value was chosen. The board is invalid.");
-                Menu.PrintHeading($"Reset?");
+                PrintMessage("Somewhere along the line a bad value was chosen. The board is invalid.");
+                Menu.PrintHeading("Reset?");
                 if (Menu.GetYesNoInput())
                 {
                     Board.ResetBoard();

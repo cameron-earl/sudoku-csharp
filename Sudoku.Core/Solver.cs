@@ -18,6 +18,7 @@ namespace Sudoku.Core
         private int[] _shuffledValues;
         private Cell[] _shuffledUnsolvedCells;
         private ExceptionDispatchInfo _exceptionDispatchInfo;
+        public Constants.SolvingTechnique LastMove { get; private set; }
 
         #endregion
 
@@ -131,6 +132,7 @@ namespace Sudoku.Core
             {
                 _moveCount[method]++;
                 ResetTechniqueFields();
+                LastMove = method;
             }
             return moveSolved;
         }
@@ -146,7 +148,7 @@ namespace Sudoku.Core
         public bool SolvePuzzle()
         {
             bool changed = true;
-            if (!Board.IsCorrectlySolved() || Board.IsProvenInvalid) return false;
+            if (Board.IsInvalidatedBySolvedBoard() || Board.IsProvenInvalid) return false;
             while (changed)
             {
                 changed = SolveEasiestMove();
@@ -608,33 +610,63 @@ namespace Sudoku.Core
             return false;
         }
 
+        private bool WXYZWing()
+        {
+            //Start with a random candidate
+            foreach (int val in ShuffledValues)
+            {
+                if (Board.IsValueSolved(val)) continue;
+
+                //Get shuffled list of all cells which contain val and one other candidate
+                IList<Cell> cellsToCheck = ShuffledUnsolvedCells
+                    .Where(cell => cell.CouldBe(val) && cell.Candidates.Count() == 2)
+                    .ToList();
+                if (cellsToCheck.Count < 3) continue;
+
+                //Check each combination of 3 of these cells
+                int[] indexes = Enumerable.Range(0, 3).ToArray();
+                while (indexes[2] != 0)
+                {
+                    Cell[] pincerCells = { cellsToCheck[indexes[0]], cellsToCheck[indexes[1]], cellsToCheck[indexes[2]] };
+                    if (CheckForWXYZWing(val, pincerCells)) return true;
+                    indexes = GetNextCombination(indexes, cellsToCheck.Count);
+                }
+            }
+            return false;
+        }
         
         //private bool BowmanBingo() //TODO BROKEN
         //{
+        //    if (Board.IsSolved()) return false;
         //    //Pick a random candidate in a random cell to test
-        //    var rnd = new Random();
-        //    Cell cell = Board.Cells.Where(c => !c.IsSolved()).OrderBy(x => rnd.Next()).FirstOrDefault();
-        //    if (cell == null) return false;
-        //    int candidate = cell.Candidates.GetCandidateArray().OrderBy(x => rnd.Next()).FirstOrDefault();
-        //    if (candidate == 0) return false;
+        //    Cell cell = ShuffledUnsolvedCells[0];
+        //    int candidate = cell.Candidates.GetCandidateArray().OrderBy(x => Rnd.Next()).FirstOrDefault();
         //    //Create new board and attempt to solve
         //    var testBoard = new Board(Board);
         //    testBoard.SetCellValue(cell.CellId, candidate, Constants.SolvingTechnique.BowmanBingo);
         //    var testSolver = new Solver(testBoard);
-        //    bool solved = testSolver.SolvePuzzle();
-        //    //If it finds a contradiction, rule out that candidate and return true
-        //    if (!testBoard.IsCorrectlySolved())
+        //    try
         //    {
-        //        cell.Candidates.EliminateCandidate(candidate);
+        //        testSolver.SolvePuzzle();
+        //    }
+        //    catch (SolvingException)
+        //    {
+        //        testBoard.IsProvenInvalid = true;
+        //        _exceptionDispatchInfo = null;
+        //    }
+        //    //If it finds a contradiction, rule out that candidate and return true
+        //    if (!testBoard.IsValid())
+        //    {
+        //        EliminateCandidate(cell, candidate);
         //        return true;
         //    }
         //    //If it solves correctly, set cell to candidate value and return true
-        //    else if (testBoard.IsSolved())
+        //    if (testBoard.IsSolved())
         //    {
-        //        Board.SetCellValue(cell.CellId, candidate, Constants.SolvingTechnique.BowmanBingo);
+        //        SetCellValue(cell, candidate, Constants.SolvingTechnique.BowmanBingo);
         //        return true;
         //    }
-        //    throw new Exception("How did we get here?");
+        //    return false; //Failure!
         //}
 
         #endregion
@@ -649,6 +681,9 @@ namespace Sudoku.Core
 
             foreach (House house in ShuffledHouses)
             {
+                //If there are less than tuple*2 cells, there should be a corresponding HiddenTuple of smaller size.
+                //But that doesn't seem to be the case.
+
                 //Get list of house's unsolved candidates ready
                 var candidateList = new List<int>();
                 for (int val = 1; val <= Constants.BoardLength; val++)
@@ -659,7 +694,7 @@ namespace Sudoku.Core
                     }
                 }
 
-                // If the house has <= [tuple] candidates, there aren't any values left to rule out
+                // If the house has <= tuple candidates, there is nothing to eliminate
                 if (candidateList.Count <= tuple) continue;
 
                 //Get random-order list of all cells with multiple but at most [tuple] candidates
@@ -724,6 +759,9 @@ namespace Sudoku.Core
         {
             foreach (House house in ShuffledHouses)
             {
+                //If there are less than tuple*2 cells, there should be a corresponding NakedTuple of smaller size.
+                //But that doesn't seem to be the case.
+
                 //Get list of candidates ready
                 var candidateList = new List<int>();
                 for (int val = 1; val <= Constants.BoardLength; val++)
@@ -734,8 +772,8 @@ namespace Sudoku.Core
                     }
                 }
 
-                //If there are less than tuple candidates to work with, the test is invalid
-                if (candidateList.Count < tuple) continue;
+                //If there are less than <= tuple candidates, there is nothing to eliminate
+                if (candidateList.Count <= tuple) continue;
 
                 //check each combination of the remaining candidates to see if they are in the same cells
                 int[] indexes = Enumerable.Range(0, tuple).ToArray();
@@ -1132,8 +1170,77 @@ namespace Sudoku.Core
             return coloringChains;
         }
 
+        // ReSharper disable once InconsistentNaming
+        private bool CheckForWXYZWing(int val, IReadOnlyList<Cell> pincerCells)
+        {
+            //identify W, X, and Y
+            IList<int> hingeValues = new List<int>();
+            foreach (Cell pincerCell in pincerCells)
+            {
+                foreach (int candidate in pincerCell.Candidates.GetCandidateArray())
+                {
+                    if (candidate != val && !hingeValues.Contains(candidate))
+                    {
+                        hingeValues.Add(candidate);
+                    }
+                }
+            }
+            if (hingeValues.Count != 3) return false;
+            
+            //int[] hingeValues = (from pincerCell in pincerCells
+            //                     from candidate in pincerCell.Candidates.GetCandidateArray()
+            //                     where candidate != val
+            //                     select candidate)
+            //                          .ToArray();
+            //if (hingeValues.Length != 3) return false;
+
+            //find hinge
+            Cell hinge = Board.Cells.FirstOrDefault(cell => 
+                            cell.CanSee(pincerCells[0])
+                            && cell.CanSee(pincerCells[1])
+                            && cell.CanSee(pincerCells[2])
+                            && cell.CouldBe(hingeValues[0])
+                            && cell.CouldBe(hingeValues[1])
+                            && cell.CouldBe(hingeValues[2])
+                            && ((cell.Candidates.Count() == 4 && cell.CouldBe(val)) 
+                                || cell.Candidates.Count() == 3));
+            if (hinge == null) return false;
+
+            //find all cells which see all hinge and pincers, have value, and aren't solved
+            IList<Cell> seeingCells;
+            if (hinge.CouldBe(val))
+            {
+                seeingCells = Board.Cells
+                    .Where(cell => cell.CanSee(pincerCells[0])
+                                   && cell.CanSee(pincerCells[1])
+                                   && cell.CanSee(pincerCells[2])
+                                   && cell.CanSee(hinge)
+                                   && !cell.IsSolved()
+                                   && cell.CouldBe(val))
+                    .ToList();
+            }
+            else
+            {
+                seeingCells = Board.Cells
+                    .Where(cell => cell.CanSee(pincerCells[0])
+                                   && cell.CanSee(pincerCells[1])
+                                   && cell.CanSee(pincerCells[2])
+                                   && !cell.IsSolved()
+                                   && cell.CouldBe(val))
+                    .ToList();
+            }
+            if (!seeingCells.Any()) return false;
+
+            // Remove candidate from all cells in list
+            foreach (Cell seeingCell in seeingCells)
+            {
+                EliminateCandidate(seeingCell, val);
+            }
+            return true;
+        }
+
         #endregion
-        
+
         #region Static Methods
 
         /// <summary>
@@ -1210,13 +1317,14 @@ namespace Sudoku.Core
                     foreach (Constants.SolvingTechnique technique in techs)
                     {
                         changed = solver.SolveOneMove(technique);
-                        if (!game.IsCorrectlySolved() || game.IsProvenInvalid)
+                        if (!game.IsValid() || game.IsInvalidatedBySolvedBoard())
                         {
                             return true;
                         }
                         if (changed) break;
                     }
                 }
+                //if (tech == Constants.SolvingTechnique.BowmanBingo && !game.IsSolved()) return false;
                 if (!solver.GetHardestMove().Equals(tech.ToString()))
                 {
                     i--;

@@ -105,5 +105,10 @@ namespace Sudoku.Core
             return count;
             //return Contains(val) ? 1 : Cells.Count(cell => cell.CouldBe(val));
         }
+
+        public int CountUnsolvedCells()
+        {
+            return Cells.Count(cell => cell.Value == 0);
+        }
     }
 }

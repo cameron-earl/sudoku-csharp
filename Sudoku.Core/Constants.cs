@@ -35,15 +35,17 @@ namespace Sudoku.Core
             YWing, // For a certain candidate, find two cells which contain c and one other candidate, but are different (ac & bc). If any of the cells that see both are ab, remove c from all cells that see both
             SwordFish, // 3-line basic fish (like X-Wing)
             //XCycle,
-                //// ReSharper disable once InconsistentNaming
+            //// ReSharper disable once InconsistentNaming
             //XYChain,
             //Medusa3D,
             JellyFish, // 4-line basic fish
             //AvoidableRectangle,
             //UniqueRectangle,
             //HiddenUniqueRectangle,
-                //// ReSharper disable once InconsistentNaming
+            //// ReSharper disable once InconsistentNaming
             XYZWing,
+            //// ReSharper disable once InconsistentNaming
+            WXYZWing,
             //AlignedPairExclusion,
             //GroupedXCycle,
             //EmptyRectangle,

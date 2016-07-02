@@ -68,7 +68,7 @@ namespace Sudoku.Core
                     if (solvedId >= 1) 
                     {
                         // Update hardest move
-                        newHardestMove = Constants.GetEasiestMove(newHardestMove, oldHardestMove);
+                        newHardestMove = Constants.GetEasiestMove(thisHardestMove, oldHardestMove);
                         if (!newHardestMove.Equals(oldHardestMove))
                         {
                             Console.WriteLine($"Easier route found: hardest move changed from {oldHardestMove} to {newHardestMove}");

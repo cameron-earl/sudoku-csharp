@@ -34,8 +34,9 @@ namespace Sudoku.Core
             var solver = new Solver(b);
             bool isSolved = solver.SolvePuzzle();
             string solvedValues = new Regex("[\\D]").Replace(b.ToSimpleString(), "");
-            string newHardestMove = solver.GetHardestMove();
+            string thisHardestMove = solver.GetHardestMove().Trim();
             string oldHardestMove = "";
+            string newHardestMove = "";
             int unsolvedId = -1;
             int solvedId = -1;
             int timesPlayed = -1;
@@ -55,7 +56,7 @@ namespace Sudoku.Core
                     while (reader.Read())
                     {
                         solvedId = reader.GetInt32(0);
-                        oldHardestMove = reader.GetString(1);
+                        oldHardestMove = reader.GetString(1).Trim();
                         timesPlayed = reader.GetInt32(2);
                     }
                     conn.Close();
@@ -68,6 +69,11 @@ namespace Sudoku.Core
                     {
                         // Update hardest move
                         newHardestMove = Constants.GetEasiestMove(newHardestMove, oldHardestMove);
+                        if (!newHardestMove.Equals(oldHardestMove))
+                        {
+                            Console.WriteLine($"Easier route found: hardest move changed from {oldHardestMove} to {newHardestMove}");
+                        }
+                        
 
                         //Increment TimesPlayed for existing solved table
                         timesPlayed = (timesPlayed > -1) ? timesPlayed + 1 : timesPlayed;
@@ -146,7 +152,7 @@ namespace Sudoku.Core
                     cmd.Connection.Open();
                     cmd.ExecuteNonQuery();
                     cmd.Connection.Close();
-                    Console.WriteLine($"Board removed from solveDB: {boardStr}");
+                    Console.WriteLine($"Board removed from solveDB: {oldHardestMove}");
                     //Console.ReadKey();
                 }
 

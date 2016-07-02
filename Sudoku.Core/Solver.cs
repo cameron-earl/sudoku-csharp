@@ -613,25 +613,19 @@ namespace Sudoku.Core
         // ReSharper disable once InconsistentNaming
         private bool WXYZWing()
         {
-            //Start with a random candidate
-            foreach (int val in ShuffledValues)
+            //Build a list of all cells with 2 or 3 potential candidates.
+            IList<Cell> PotentialPincerList = ShuffledUnsolvedCells.Where(c => c.Candidates.Count() <= 3).ToList();
+            if (PotentialPincerList.Count < 3) return false;
+            
+            //Each combination of 3 of these cells could the pincer cells. Check each combination.
+            int[] indexes = Enumerable.Range(0, 3).ToArray();
+            while (indexes[indexes.Length - 1] > 0)
             {
-                if (Board.IsValueSolved(val)) continue;
+                Cell[] pincerCells = {PotentialPincerList[indexes[0]], PotentialPincerList[indexes[1]], PotentialPincerList[indexes[2]]};
+                bool found = CheckForWXYZWing(pincerCells.ToList());
+                if (found) return true;
 
-                //Get shuffled list of all cells which contain val 3 and 1 or 2 other candidates
-                IList<Cell> cellsToCheck = ShuffledUnsolvedCells
-                    .Where(cell => cell.CouldBe(val) && !cell.IsSolved() && cell.Candidates.Count() <= 3)
-                    .ToList();
-                if (cellsToCheck.Count < 3) continue;
-
-                //Check each combination of 3 of these cells
-                int[] indexes = Enumerable.Range(0, 3).ToArray();
-                while (indexes[2] != 0)
-                {
-                    Cell[] pincerCells = { cellsToCheck[indexes[0]], cellsToCheck[indexes[1]], cellsToCheck[indexes[2]] };
-                    if (CheckForWXYZWing(val, pincerCells)) return true;
-                    indexes = GetNextCombination(indexes, cellsToCheck.Count);
-                }
+                indexes = GetNextCombination(indexes, PotentialPincerList.Count);
             }
             return false;
         }
@@ -1172,91 +1166,92 @@ namespace Sudoku.Core
         }
 
         // ReSharper disable once InconsistentNaming
-        private bool CheckForWXYZWing(int val, IReadOnlyList<Cell> pincerCells)
+        private bool CheckForWXYZWing(IList<Cell> pincerCells)
         {
-            //pincer cells that contain identical candidates are OK
-
-            //identify W, X, and Y
-            IList<int> hingeValues = new List<int>();
-            foreach (Cell pincerCell in pincerCells)
+            //Build a list of their potential candidates
+            IList<int> candidates = new List<int>();
+            foreach (Cell cell in pincerCells)
             {
-                foreach (int candidate in pincerCell.Candidates.GetCandidateArray())
+                var candidateArr = cell.Candidates.GetCandidateArray();
+                foreach (int candidate in candidateArr)
                 {
-                    if (candidate != val && !hingeValues.Contains(candidate))
+                    if (!candidates.Contains(candidate))
                     {
-                        hingeValues.Add(candidate);
+                        candidates.Add(candidate);
                     }
                 }
             }
-            if (hingeValues.Count != 3) return false;
+            if (candidates.Count != 4) return false;
 
-            //check for other non-restricted digits // todo
-            foreach (int hingeValue in hingeValues)
+            //Find hinge
+            List<Cell> hinges = ShuffledUnsolvedCells
+                .Where(cell => cell.CanSee(pincerCells[0])
+                               && cell.CanSee(pincerCells[1])
+                               && cell.CanSee(pincerCells[2])
+                               && cell.Candidates.Count() <= 4).ToList();
+            if (hinges.Count == 0) return false;
+            Cell hinge = null;
+            foreach (Cell cell in hinges)
             {
+                int[] hingeCandidates = cell.Candidates.GetCandidateArray();
+                bool isHinge = true;
+                foreach (int candidate in hingeCandidates)
+                {
+                    if (!candidates.Contains(candidate))
+                    {
+                        isHinge = false;
+                    }
+                }
+                if (isHinge)
+                {
+                    hinge = cell;
+                }
+            }
+            if (hinge == null) return false;
+            pincerCells.Add(hinge);
+
+            //find key value and check for other non-restricted digits
+            IList<int> sharedNonRestrictedDigits = new List<int>();
+            foreach (int candidate in candidates)
+            {
+                bool isSharedNonRestrictedDigit = false;
                 int[] indexes = Enumerable.Range(0, 2).ToArray();
-                while (indexes[indexes.Length - 1] > 0)
+                while (!isSharedNonRestrictedDigit && indexes[indexes.Length - 1] > 0)
                 {
                     Cell cell1 = pincerCells[indexes[0]];
                     Cell cell2 = pincerCells[indexes[1]];
-                    if (cell1.CouldBe(hingeValue)
-                        && cell2.CouldBe(hingeValue)
-                        && !cell1.CanSee(cell2))
+                    if (!cell1.CanSee(cell2) && cell1.CouldBe(candidate) && cell2.CouldBe(candidate))
                     {
-                        return false;
+                        isSharedNonRestrictedDigit = true;
+                        sharedNonRestrictedDigits.Add(candidate);
                     }
                     indexes = GetNextCombination(indexes, pincerCells.Count);
                 }
             }
+            if (sharedNonRestrictedDigits.Count != 1) return false;
+            int keyValue = sharedNonRestrictedDigits[0];
 
-            //find hinge
-            Cell hinge = Board.Cells
-                .FirstOrDefault(cell => cell.CanSee(pincerCells[0])
-                                        && cell.CanSee(pincerCells[1])
-                                        && cell.CanSee(pincerCells[2])
-                                        && cell.CouldBe(hingeValues[0])
-                                        && cell.CouldBe(hingeValues[1])
-                                        && cell.CouldBe(hingeValues[2])
-                                        && ((cell.Candidates.Count() == 4 && cell.CouldBe(val)) 
-                                            || cell.Candidates.Count() == 3));
-            if (hinge == null) return false;
+            //get a list of just the cells that contain the key Value
+            IList<Cell> keyValCells = pincerCells.Where(c => c.CouldBe(keyValue)).ToList();
+            if (keyValCells.Count < 2) throw new SolvingException("Something weird happened!");
 
-            //find all cells which see all hinge and pincers, have value, and aren't solved
-            IList<Cell> seeingCells;
-            if (hinge.CouldBe(val))
+            //get a list of all the cells that contain key value & can see all of these cells
+            IList<Cell> seeingCells = new List<Cell>();
+            foreach (Cell seeingCell in ShuffledUnsolvedCells)
             {
-                seeingCells = Board.Cells
-                    .Where(cell => cell.CanSee(pincerCells[0])
-                                   && cell.CanSee(pincerCells[1])
-                                   && cell.CanSee(pincerCells[2])
-                                   && cell.CanSee(hinge)
-                                   && !cell.IsSolved()
-                                   && cell.CouldBe(val))
-                    .ToList();
-            }
-            //or just the pincers
-            else
-            {
-                seeingCells = Board.Cells
-                    .Where(cell => cell.CanSee(pincerCells[0])
-                                   && cell.CanSee(pincerCells[1])
-                                   && cell.CanSee(pincerCells[2])
-                                   && !cell.IsSolved()
-                                   && cell.CouldBe(val))
-                    .ToList();
+                bool canSeeAll = true;
+                if (!seeingCell.CouldBe(keyValue)) continue;
+                foreach (Cell keyValCell in keyValCells)
+                {
+                    canSeeAll = seeingCell.CanSee(keyValCell) && canSeeAll;
+                }
+                if (canSeeAll) seeingCells.Add(seeingCell);
             }
             if (!seeingCells.Any()) return false;
 
-            // Remove candidate from all cells in list
             foreach (Cell seeingCell in seeingCells)
             {
-                if (Board.SolvedBoard?.Cells?[0] != null)
-                {
-                    if (Board.SolvedBoard.GetCell(seeingCell.CellId).Value == val)
-                    {
-                        throw new SolvingException("blurg!");
-                    }
-                }
-                EliminateCandidate(seeingCell, val);
+                seeingCell.Candidates.EliminateCandidate(keyValue);
             }
             return true;
         }

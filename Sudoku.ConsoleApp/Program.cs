@@ -13,12 +13,12 @@ namespace Sudoku.ConsoleApp
         {
             //SolvedUpdater();
 
-            UnsolvedUpdater();
+            //UnsolvedUpdater();
 
             //TestNewTechnique(Constants.SolvingTechnique.WXYZWing);
 
             //PuzzleImporter();
-            //MainMenu();
+            MainMenu();
         }
 
         // ReSharper disable once UnusedMember.Local

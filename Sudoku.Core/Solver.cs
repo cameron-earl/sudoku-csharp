@@ -1174,13 +1174,7 @@ namespace Sudoku.Core
         // ReSharper disable once InconsistentNaming
         private bool CheckForWXYZWing(int val, IReadOnlyList<Cell> pincerCells)
         {
-            //verify no pincer cells have identical candidates //TODO necessary?
-            if (pincerCells[0].Candidates.Equals(pincerCells[1].Candidates)
-                || pincerCells[0].Candidates.Equals(pincerCells[2].Candidates)
-                || pincerCells[1].Candidates.Equals(pincerCells[2].Candidates))
-            {
-                return false;
-            }
+            //pincer cells that contain identical candidates are OK
 
             //identify W, X, and Y
             IList<int> hingeValues = new List<int>();

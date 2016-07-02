@@ -15,7 +15,7 @@ namespace Sudoku.ConsoleApp
 
             UnsolvedUpdater();
 
-            //TestNewTechnique(Constants.SolvingTechnique.HiddenPair);
+            //TestNewTechnique(Constants.SolvingTechnique.WXYZWing);
 
             //PuzzleImporter();
             //MainMenu();

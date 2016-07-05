@@ -15,7 +15,6 @@ This project was started as a way to practice MVC concepts using a Sudoku game a
 	<li>MVC-based web-app implementation</li>
 	<li>More solving algorithms implemented (full list in Sudoku.Core/Constants/SolveMethod enum)</li>
 	<li>Tool to create new Sudoku boards</li>
-	<li>Scoring mechanism</li>
 	<li>Trainer in web-app that helps user learn and practice solving methods</li>
     <li>If a move is available in a cell, highlight according to the hardest move necessary to solve it in the easiest way.</li>
     <li>Change solving process to find all potential moves before doing any, unless specifically solving whole puzzle</li>
@@ -28,6 +27,12 @@ This project was started as a way to practice MVC concepts using a Sudoku game a
 <ul>
 	<li>Add Bowman's Bingo or other brute force solving technique so that all can be solved</li>
 	<li>Add logger which can display solution process or error messages</li>
+	<li>Create scoring mechanism</li>
+	<li>	Find all potential moves</li>
+	<li>	Add the value of the easiest move times a depreciating factor</li>
+	<li>	Depreciating factor is dependent on the number and difficulty of other available moves</li>
+	<li>	i.e. if 9 naked singles & 6 hidden singles etc: 10 * (1 - .1*9 - .05*6 etc)</li>
+	<li>	solve move and repeat</li>
 </ul>
 
 <h4>Sudoku-based incremental idea</h4>

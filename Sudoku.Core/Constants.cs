@@ -1,6 +1,7 @@
 #define DEBUG
 
 using System;
+using System.Collections.Generic;
 
 namespace Sudoku.Core
 {
@@ -34,6 +35,7 @@ namespace Sudoku.Core
             SimpleColoring,
             YWing, // For a certain candidate, find two cells which contain c and one other candidate, but are different (ac & bc). If any of the cells that see both are ab, remove c from all cells that see both
             SwordFish, // 3-line basic fish (like X-Wing)
+            BiValueUniversalGrave, // if all unsolved cells have two candidates except one with three, the odd number that couldn't be paired with another cell is the solution for that cell
             //XCycle,
             //// ReSharper disable once InconsistentNaming
             //XYChain,
@@ -65,6 +67,30 @@ namespace Sudoku.Core
             //BowmanBingo,
             Unsolved
         }
+
+        public static Dictionary<SolvingTechnique, int> TechniquePointValue = new Dictionary<SolvingTechnique, int>()
+        {
+            { SolvingTechnique.NakedSingle, 1 },
+            { SolvingTechnique.HiddenSingle, 1 },
+            { SolvingTechnique.NakedPair, 3 },
+            { SolvingTechnique.HiddenPair, 3 },
+            { SolvingTechnique.IntersectionRemoval, 5 },
+            { SolvingTechnique.NakedTriple, 10 },
+            { SolvingTechnique.HiddenTriple, 15 },
+            { SolvingTechnique.NakedQuad, 30 },
+            { SolvingTechnique.HiddenQuad, 50 },
+            { SolvingTechnique.XWing, 25 },
+            { SolvingTechnique.Skyscraper, 40 },
+            { SolvingTechnique.TwoStringKite, 40 },
+            { SolvingTechnique.SimpleColoring, 70 },
+            { SolvingTechnique.YWing, 60 },
+            { SolvingTechnique.SwordFish, 100 },
+            { SolvingTechnique.JellyFish, 200 },
+            { SolvingTechnique.XYZWing, 120 },
+            { SolvingTechnique.WXYZWing, 300 },
+            { SolvingTechnique.SueDeCoq, 500 },
+            { SolvingTechnique.BiValueUniversalGrave, 50 }
+        };
 
         public static string GetEasiestMove(string techniqueName1, string techniqueName2)
         {

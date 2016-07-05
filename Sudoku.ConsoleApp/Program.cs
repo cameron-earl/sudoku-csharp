@@ -1,4 +1,6 @@
-﻿using System.Data.SqlClient;
+﻿using System;
+using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -11,14 +13,22 @@ namespace Sudoku.ConsoleApp
     {
         public static void Main()
         {
-            //SolvedUpdater();
-
-            UnsolvedUpdater();
+            for (int i = 0; i < 10; i++)
+            {
+                SolvedUpdater(15 -  i);
+            }
+            for (int i = 0; i < 15; i++)
+            {
+                UnsolvedUpdater(15 -  i);
+            }
+            
 
             //TestNewTechnique(Constants.SolvingTechnique.BiValueUniversalGrave);
 
             //PuzzleImporter();
             //MainMenu();
+            WriteLine("Farewell!");
+            ReadKey();
         }
 
         // ReSharper disable once UnusedMember.Local
@@ -28,7 +38,6 @@ namespace Sudoku.ConsoleApp
             bool falsePositives = Solver.TechniqueHasFalsePositives(technique);
             string str = falsePositives ? "" : "not";
             WriteLine($"{technique} is {str} throwing false positives");
-            ReadKey();
         }
 
         /// <summary>
@@ -36,13 +45,15 @@ namespace Sudoku.ConsoleApp
         /// Takes a while because all puzzles require lots of technique attempts
         /// </summary>
         // ReSharper disable once UnusedMember.Local
-        private static void UnsolvedUpdater()
+        private static void UnsolvedUpdater(int numberOfPuzzles)
         {
+            Stopwatch runTime = Stopwatch.StartNew();
+            string topString = numberOfPuzzles > 0 ? $"TOP {numberOfPuzzles} " : "";
             int newSolveCount = 0;
             int totalUnsolved = 0;
             using (var conn = new SqlConnection(DbHelper.ConnStr))
             {
-                var cmd = new SqlCommand("SELECT Puzzle FROM dbo.UnsolvedBoards", conn);
+                var cmd = new SqlCommand($"SELECT {topString}Puzzle FROM dbo.UnsolvedBoards ORDER BY Id DESC", conn);
                 conn.Open();
                 using (SqlDataReader reader = cmd.ExecuteReader())
                 {
@@ -60,9 +71,11 @@ namespace Sudoku.ConsoleApp
                     conn.Close();
                 }
             }
+            runTime.Stop();
+            TimeSpan ts = runTime.Elapsed;
+            string elapsedTime = $"{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}.{ts.Milliseconds / 10:00}";
             WriteLine();
-            WriteLine($"{newSolveCount} solved out of {totalUnsolved}");
-            ReadKey();
+            WriteLine($"{newSolveCount} solved out of {totalUnsolved} in {elapsedTime}");
         }
 
         /// <summary>
@@ -71,11 +84,15 @@ namespace Sudoku.ConsoleApp
         /// If hardest move is easier, will update hardest move
         /// Eventually will score puzzles
         /// </summary>
-        private static void SolvedUpdater()
+        private static void SolvedUpdater(int numberOfPuzzles)
         {
+            Stopwatch runTime = Stopwatch.StartNew();
+            
+            string topString = numberOfPuzzles > 0 ? $"TOP {numberOfPuzzles} " : "";
+
             using (var conn = new SqlConnection(DbHelper.ConnStr))
             {
-                var cmd = new SqlCommand("SELECT Puzzle FROM dbo.Boards", conn);
+                var cmd = new SqlCommand($"SELECT {topString}Puzzle FROM dbo.Boards ORDER BY Id DESC", conn);
                 conn.Open();
                 using (SqlDataReader reader = cmd.ExecuteReader())
                 {
@@ -87,8 +104,10 @@ namespace Sudoku.ConsoleApp
                     conn.Close();
                 }
             }
-            WriteLine("\nSolved database updated.");
-            ReadKey();
+            runTime.Stop();
+            TimeSpan ts = runTime.Elapsed;
+            string elapsedTime = $"{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}.{ts.Milliseconds/10:00}";
+            WriteLine($"\nSolved database updated in {elapsedTime}.");
         }
 
         /// <summary>

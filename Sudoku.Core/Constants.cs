@@ -56,7 +56,7 @@ namespace Sudoku.Core
             //DigitForcingChain,
             //CellForcingChain,
             //UnitForcingChain,
-            //SuedeCoq,
+            SueDeCoq,
             //AlmostLockedSet,
             //DeathBlossom,
             //PatternOverlay,

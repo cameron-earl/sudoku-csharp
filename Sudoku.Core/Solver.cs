@@ -224,17 +224,15 @@ namespace Sudoku.Core
         /// <returns></returns>
         private bool NakedSingle()
         {
-            
-            bool changed = false;
             foreach (Cell cell in ShuffledUnsolvedCells)
             {
                 if (cell.Candidates.SolvedValue == 0) continue;
-
+                
                 SetCellValue(cell, cell.Candidates.SolvedValue, Constants.SolvingTechnique.NakedSingle);
 
-                changed = true;
+                return true;
             }
-            return changed;
+            return false;
         }
 
         /// <summary>
@@ -614,22 +612,84 @@ namespace Sudoku.Core
         private bool WXYZWing()
         {
             //Build a list of all cells with 2 or 3 potential candidates.
-            IList<Cell> PotentialPincerList = ShuffledUnsolvedCells.Where(c => c.Candidates.Count() <= 3).ToList();
-            if (PotentialPincerList.Count < 3) return false;
+            IList<Cell> potentialPincerList = ShuffledUnsolvedCells.Where(c => c.Candidates.Count() <= 3).ToList();
+            if (potentialPincerList.Count < 3) return false;
             
             //Each combination of 3 of these cells could the pincer cells. Check each combination.
             int[] indexes = Enumerable.Range(0, 3).ToArray();
             while (indexes[indexes.Length - 1] > 0)
             {
-                Cell[] pincerCells = {PotentialPincerList[indexes[0]], PotentialPincerList[indexes[1]], PotentialPincerList[indexes[2]]};
+                Cell[] pincerCells = {potentialPincerList[indexes[0]], potentialPincerList[indexes[1]], potentialPincerList[indexes[2]]};
                 bool found = CheckForWXYZWing(pincerCells.ToList());
                 if (found) return true;
 
-                indexes = GetNextCombination(indexes, PotentialPincerList.Count);
+                indexes = GetNextCombination(indexes, potentialPincerList.Count);
             }
             return false;
         }
-        
+
+        private bool SueDeCoq()
+        {
+            // randomly iterate through boxes
+            foreach (int boxNumber in ShuffledValues)
+            {
+                House box = Board.GetHouse(House.HouseType.Box, boxNumber - 1);
+                if (box.CountUnsolvedCells() < 3) continue;
+                //randomly iterate through lines
+                IList<House> shuffledLines = new List<House>();
+                int[] cellIndexes = {0, 4, 8};
+                foreach (int i in cellIndexes)
+                {
+                    shuffledLines.Add(Board.GetHouse(House.HouseType.Row, box.Cells[i]));
+                    shuffledLines.Add(Board.GetHouse(House.HouseType.Column, box.Cells[i]));
+                }
+                shuffledLines = shuffledLines.OrderBy(x => Rnd.Next()).ToList();
+                foreach (House line in shuffledLines)
+                {
+                    //identify cells at intersection
+                    IList<Cell> baseCells = box.Cells.Where(cell => !cell.IsSolved() && line.Cells.Contains(cell)).ToList();
+                    int baseCellCount = baseCells.Count;
+                    if (baseCellCount < 2 || baseCellCount > 3) continue;
+
+                    //identify candidates
+                    IList<int> baseCandidates = GetCandidateSet(baseCells);
+                    int candidateCount = baseCandidates.Count;
+                    if (candidateCount < 4) continue;
+
+                    //use to get candidate set here
+                    if (baseCellCount == 2)
+                    {
+                        if (candidateCount != 4) continue;
+                        if (CheckForSueDeCoq(baseCells, baseCandidates, box, line)) return true;
+                    }
+                    else if (baseCellCount == 3)
+                    {
+                        if (candidateCount == 5)
+                        {
+                            if (CheckForSueDeCoq(baseCells, baseCandidates, box, line)) return true;
+                        }
+                        else if (candidateCount > 5)
+                        {
+                            //check each combination of two cells within the basecells that contain 4 candidates
+                            int[] indexes = Enumerable.Range(0, 2).ToArray();
+                            while (indexes[indexes.Length - 1] > 0)
+                            {
+                                IList<Cell> subsetBaseCells = new List<Cell>
+                                {
+                                    baseCells[indexes[0]],
+                                    baseCells[indexes[1]]
+                                };
+                                baseCandidates = GetCandidateSet(subsetBaseCells);
+                                if (baseCandidates.Count == 4 && CheckForSueDeCoq(baseCells, baseCandidates, box, line)) return true;
+                                indexes = GetNextCombination(indexes, baseCellCount);
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        } 
+
         //private bool BowmanBingo() //TODO BROKEN
         //{
         //    if (Board.IsSolved()) return false;
@@ -1119,9 +1179,9 @@ namespace Sudoku.Core
                 {
                     Cell cell = coloringChains[0][i];
                     IList<House> cellHouses = new List<House>();
-                    cellHouses.Add(Board.GetHouse(House.HouseType.Row, cell.RowNumber -1));
-                    cellHouses.Add(Board.GetHouse(House.HouseType.Column, cell.ColumnNumber - 1));
-                    cellHouses.Add(Board.GetHouse(House.HouseType.Box, cell.BoxNumber - 1));
+                    cellHouses.Add(Board.GetHouse(House.HouseType.Row, cell));
+                    cellHouses.Add(Board.GetHouse(House.HouseType.Column, cell));
+                    cellHouses.Add(Board.GetHouse(House.HouseType.Box, cell));
                     foreach (House house in cellHouses)
                     {
                         if (house.CountCellsWithCandidate(val) == 2)
@@ -1142,9 +1202,9 @@ namespace Sudoku.Core
                 {
                     Cell cell = coloringChains[1][i];
                     IList<House> cellHouses = new List<House>();
-                    cellHouses.Add(Board.GetHouse(House.HouseType.Row, cell.RowNumber - 1));
-                    cellHouses.Add(Board.GetHouse(House.HouseType.Column, cell.ColumnNumber - 1));
-                    cellHouses.Add(Board.GetHouse(House.HouseType.Box, cell.BoxNumber - 1));
+                    cellHouses.Add(Board.GetHouse(House.HouseType.Row, cell));
+                    cellHouses.Add(Board.GetHouse(House.HouseType.Column, cell));
+                    cellHouses.Add(Board.GetHouse(House.HouseType.Box, cell));
                     foreach (House house in cellHouses)
                     {
                         if (house.CountCellsWithCandidate(val) == 2)
@@ -1256,6 +1316,81 @@ namespace Sudoku.Core
             return true;
         }
 
+        private static bool CheckForSueDeCoq(ICollection<Cell> baseCells, ICollection<int> baseCandidates, House box, House line)
+        {
+            // look for a cell in line not in box with two values from candidates
+            IList<Cell> lineCells = new List<Cell>();
+            foreach (Cell cell in line.Cells)
+            {
+                if (!box.Cells.Contains(cell) && cell.Candidates.Count() == 2)
+                {
+                    var cellCandidates = cell.Candidates.GetCandidateArray();
+                    bool isValid = true;
+                    foreach (int val in cellCandidates)
+                    {
+                        if (!baseCandidates.Contains(val)) isValid = false;
+                    }
+                    if (isValid) lineCells.Add(cell);
+                }
+            }
+            if (!lineCells.Any()) return false;
+
+            // look for a cell in box not in line with two different values from candidates
+            IList<Cell> boxCells = new List<Cell>();
+            foreach (Cell cell in box.Cells)
+            {
+                if (!line.Cells.Contains(cell) && cell.Candidates.Count() == 2)
+                {
+                    var cellCandidates = cell.Candidates.GetCandidateArray();
+                    bool isValid = true;
+                    foreach (int val in cellCandidates)
+                    {
+                        if (!baseCandidates.Contains(val)) isValid = false;
+                    }
+                    if (isValid) boxCells.Add(cell);
+                }
+            }
+            if (!boxCells.Any()) return false;
+
+            //check each combination of box cell and line cell to see if any combine to be 4 different candidates
+            foreach (Cell boxCell in boxCells)
+            {
+                IList<int> boxCellCandidates = new List<int>(boxCell.Candidates.GetCandidateArray());
+
+                foreach (Cell lineCell in lineCells)
+                {
+                    bool allValuesUnique = true;
+                    int[] lineCellCandidates = lineCell.Candidates.GetCandidateArray();
+                    foreach (int val in lineCellCandidates)
+                    {
+                        if (boxCellCandidates.Contains(val)) allValuesUnique = false;
+                    }
+                    if (!allValuesUnique) continue;
+
+                    bool success = false;
+                    foreach (int val in boxCellCandidates)
+                    {
+                        foreach (Cell cell in box.Cells)
+                        {
+                            if (cell.Equals(boxCell) || baseCells.Contains(cell)) continue;
+                            success = cell.Candidates.EliminateCandidate(val) || success;
+                        }
+                    }
+                    foreach (int val in lineCellCandidates)
+                    {
+                        foreach (Cell cell in line.Cells)
+                        {
+                            if (cell.Equals(lineCell) || baseCells.Contains(cell)) continue;
+                            success = cell.Candidates.EliminateCandidate(val) || success;
+                        }
+                    }
+                    if (success) return true;
+                }
+            }
+
+            return false;
+        }
+
         #endregion
 
         #region Static Methods
@@ -1278,7 +1413,7 @@ namespace Sudoku.Core
             //  if no change is made, the set is ruled out
 
 
-            int pointer = LastNonConsecutiveIndex(indexes); ;
+            int pointer = LastNonConsecutiveIndex(indexes);
             while (indexes[indexes.Length - 1] >= indexCount && pointer >= 0)
             {
                 if (pointer >= 0)
@@ -1356,7 +1491,21 @@ namespace Sudoku.Core
             return false;
         }
 
+        public static List<int> GetCandidateSet(IEnumerable<Cell> baseCells)
+        {
+            var candidates = new List<int>();
+            foreach (Cell cell in baseCells)
+            {
+                int[] candArr = cell.Candidates.GetCandidateArray();
+                foreach (int val in candArr)
+                {
+                    if (!candidates.Contains(val)) candidates.Add(val);
+                }
+            }
+            return candidates;
+        }
+
         #endregion
-        
+
     }
 }

@@ -35,8 +35,8 @@ namespace Sudoku.Core
             bool isSolved = solver.SolvePuzzle();
             string solvedValues = new Regex("[\\D]").Replace(b.ToSimpleString(), "");
             string thisHardestMove = solver.GetHardestMove().Trim();
-            string oldHardestMove = "";
-            string newHardestMove = "";
+            string oldHardestMove = null;
+            string newHardestMove = null;
             int unsolvedId = -1;
             int solvedId = -1;
             int timesPlayed = -1;
@@ -64,11 +64,11 @@ namespace Sudoku.Core
 
                 if (isSolved)
                 {
+                    newHardestMove = (oldHardestMove == null) ? thisHardestMove : Constants.GetEasiestMove(thisHardestMove, oldHardestMove);
                     // If it was found in database
                     if (solvedId >= 1) 
                     {
                         // Update hardest move
-                        newHardestMove = Constants.GetEasiestMove(thisHardestMove, oldHardestMove);
                         if (!newHardestMove.Equals(oldHardestMove))
                         {
                             Console.WriteLine($"Easier route found: hardest move changed from {oldHardestMove} to {newHardestMove}");
@@ -275,6 +275,76 @@ namespace Sudoku.Core
                 }
             }
             return solvedBoardString;
+        }
+
+        public static int GetMinSolvedId()
+        {
+            int minId = -1;
+            using (var conn = new SqlConnection(ConnStr))
+            {
+                var cmd = new SqlCommand()
+                {
+                    CommandText = "SELECT TOP 1 Id FROM dbo.Boards",
+                    Connection = conn
+                };
+                conn.Open();
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        minId = reader.GetInt32(0);
+                    }
+                    conn.Close();
+                }
+            }
+            return minId;
+        }
+
+        public static int GetMaxSolvedId()
+        {
+            int maxId = -1;
+            using (var conn = new SqlConnection(ConnStr))
+            {
+                var cmd = new SqlCommand()
+                {
+                    CommandText = "SELECT TOP 1 Id FROM dbo.Boards ORDER BY Id DESC",
+                    Connection = conn
+                };
+                conn.Open();
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        maxId = reader.GetInt32(0);
+                    }
+                    conn.Close();
+                }
+            }
+            return maxId;
+        }
+
+        public static string GetSolvedBoardById(int inputId)
+        {
+            
+            string puzzle = null;
+            using (var conn = new SqlConnection(ConnStr))
+            {
+                var cmd = new SqlCommand()
+                {
+                    CommandText = $"SELECT TOP 1 Puzzle FROM dbo.Boards WHERE Id={inputId}",
+                    Connection = conn
+                };
+                conn.Open();
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        puzzle = reader.GetString(0);
+                    }
+                    conn.Close();
+                }
+            }
+            return puzzle;
         }
     }
 }

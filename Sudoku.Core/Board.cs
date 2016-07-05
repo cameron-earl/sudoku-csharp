@@ -229,6 +229,21 @@ namespace Sudoku.Core
             }
         }
 
+        public House GetHouse(House.HouseType houseType, Cell cell)
+        {
+            switch (houseType)
+            {
+                case House.HouseType.Row:
+                    return Rows[cell.RowNumber - 1];
+                case House.HouseType.Column:
+                    return Columns[cell.ColumnNumber - 1];
+                case House.HouseType.Box:
+                    return Boxes[cell.BoxNumber - 1];
+                default:
+                    throw new Exception("What the what?");
+            }
+        }
+
         private void AddCellToHouses(Cell cell)
         {
             int i = cell.CellId - 1;

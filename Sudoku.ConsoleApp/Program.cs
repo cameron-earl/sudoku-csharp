@@ -13,9 +13,9 @@ namespace Sudoku.ConsoleApp
         {
             SolvedUpdater();
 
-            //UnsolvedUpdater();
+            UnsolvedUpdater();
 
-            //TestNewTechnique(Constants.SolvingTechnique.WXYZWing);
+            //TestNewTechnique(Constants.SolvingTechnique.SueDeCoq);
 
             //PuzzleImporter();
             //MainMenu();
@@ -125,9 +125,10 @@ namespace Sudoku.ConsoleApp
                 WriteLine("  C. Play an Easy Game");
                 WriteLine("  D. Play a Challenging Game");
                 WriteLine("  E. Play an Unsolved Game");
+                WriteLine("  F. Play a specific board in database");
                 WriteLine("  X. Exit program");
 
-                const string regexStr = "[a-ex]";
+                const string regexStr = "[a-fx]";
                 char choice = Menu.GetCharacterInput(new Regex(regexStr));
                 switch (choice)
                 {
@@ -146,6 +147,9 @@ namespace Sudoku.ConsoleApp
                     case 'e':
                         board = DbHelper.GetUnsolvedBoard();
                         break;
+                    case 'f':
+                        board = GetSolvedBoardById();
+                        break;
                     case 'x':
                         done = true;
                         break;
@@ -158,6 +162,22 @@ namespace Sudoku.ConsoleApp
                     PlayGame(board);
                 }
             }
+        }
+
+        private static string GetSolvedBoardById()
+        {
+            int min = DbHelper.GetMinSolvedId();
+            int max = DbHelper.GetMaxSolvedId();
+            bool isValid = false;
+            string boardStr = null;
+            while (!isValid)
+            {
+                int input = Menu.GetIntInput(min, max);
+                boardStr = DbHelper.GetSolvedBoardById(input);
+                if (boardStr != null) isValid = true;
+                if (!isValid) WriteLine("Board with specified id does not exist. Try again.");
+            }
+            return boardStr;
         }
 
         private static void PlayGame(string boardStr)

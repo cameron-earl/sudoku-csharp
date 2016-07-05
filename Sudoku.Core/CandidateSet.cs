@@ -147,13 +147,14 @@ namespace Sudoku.Core
 
         public int[] GetCandidateArray()
         {
-            int[] candArr = new int[Count()];
+            var candArr = new int[Count()];
             int candidateIndex = 0;
             for (int i = 0; candidateIndex < Candidates.Length && i < candArr.Length; i++)
             {
                 while (!Candidates[candidateIndex])
                 {
                     candidateIndex++;
+                    if (candidateIndex >= Constants.BoardLength) throw new Exception("Something Weird.");
                 }
                 candArr[i] = candidateIndex + 1;
                 candidateIndex++;

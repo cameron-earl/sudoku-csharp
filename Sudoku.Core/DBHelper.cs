@@ -78,7 +78,7 @@ namespace Sudoku.Core
                         //Increment TimesPlayed for existing solved table
                         timesPlayed = (timesPlayed > -1) ? timesPlayed + 1 : timesPlayed;
 
-                        cmd.CommandText = $"UPDATE dbo.Boards SET HardestMove = '{newHardestMove}', TimesPlayed = {timesPlayed} WHERE Id = {solvedId}";
+                        cmd.CommandText = $"UPDATE dbo.Boards SET HardestMove = '{newHardestMove}', Score={solver.Score}, TimesPlayed = {timesPlayed} WHERE Id = {solvedId}";
                         conn.Open();
                         cmd.ExecuteNonQuery();
                         conn.Close();
@@ -121,7 +121,7 @@ namespace Sudoku.Core
                 else if (isSolved && solvedId == -1)
                 {
                     cmd = new SqlCommand(
-                        $"INSERT INTO dbo.Boards (Puzzle, SolvedValues, HardestMove, TimesPlayed) VALUES ('{boardStr}','{solvedValues}','{newHardestMove}',1)",
+                        $"INSERT INTO dbo.Boards (Puzzle, Score, SolvedValues, HardestMove, TimesPlayed) VALUES ('{boardStr}',{solver.Score},'{solvedValues}','{newHardestMove}',1)",
                         conn);
                     cmd.Connection.Open();
                     cmd.ExecuteNonQuery();

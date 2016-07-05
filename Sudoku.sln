@@ -1,18 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sudoku.Core", "Sudoku.Core\Sudoku.Core.csproj", "{534CF436-DBCE-4E3E-9122-004C6D77ACDE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sudoku.ConsoleApp", "Sudoku.ConsoleApp\Sudoku.ConsoleApp.csproj", "{9B875B36-DCCE-471B-B3B1-40C07AD32734}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sudoku.Tests", "Sudoku.Tests\Sudoku.Tests.csproj", "{6FB873A2-CFF2-49EF-AB63-E5FA51D326EA}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{427C604E-4FB0-4351-97B8-C050C8E8C227}"
-	ProjectSection(SolutionItems) = preProject
-		Sudoku.Core\Doc\SolvingExplanation.htm = Sudoku.Core\Doc\SolvingExplanation.htm
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{15EA676E-1614-463E-9C43-FE67BA8294B0}"
 	ProjectSection(SolutionItems) = preProject

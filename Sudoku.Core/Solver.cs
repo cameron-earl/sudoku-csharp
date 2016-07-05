@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+using System.Xml.Schema;
 
 namespace Sudoku.Core
 {
@@ -94,6 +95,8 @@ namespace Sudoku.Core
 
         #region Properties
         public Board Board { get; set; }
+
+        public int Score { get; private set; }
         #endregion
 
         #region Action/Solving Methods
@@ -112,27 +115,35 @@ namespace Sudoku.Core
         /// <summary>
         /// Uses reflection to call a method by the same name as the provided enum
         /// </summary>
-        /// <param name="method"></param>
+        /// <param name="technique"></param>
         /// <returns></returns>
-        private bool SolveOneMove(Constants.SolvingTechnique method)
+        private bool SolveOneMove(Constants.SolvingTechnique technique)
         {
             bool moveSolved;
             try
             {
-                MethodInfo theMethod = GetType().GetMethod($"{method}", BindingFlags.NonPublic | BindingFlags.Instance);
+                MethodInfo theMethod = GetType().GetMethod($"{technique}", BindingFlags.NonPublic | BindingFlags.Instance);
                 moveSolved = (bool)theMethod.Invoke(this, null);
             }
             catch (NullReferenceException)
             {
                 throw new Exception(
-                    $"There was an attempt to call a solving method ({method}) which hasn't yet been programmed.");
+                    $"There was an attempt to call a solving method ({technique}) which hasn't yet been programmed.");
             }
             _exceptionDispatchInfo?.Throw();
             if (moveSolved)
             {
-                _moveCount[method]++;
+                _moveCount[technique]++;
+                try
+                {
+                    Score += Constants.TechniquePointValue[technique];
+                }
+                catch (Exception)
+                {
+                    throw new SolvingException("Remember to set a point value for the new technique!");
+                }
                 ResetTechniqueFields();
-                LastMove = method;
+                LastMove = technique;
             }
             return moveSolved;
         }
@@ -149,7 +160,7 @@ namespace Sudoku.Core
         {
             bool changed = true;
             if (Board.IsInvalidatedBySolvedBoard() || Board.IsProvenInvalid) return false;
-            while (changed)
+            while (changed && ShuffledUnsolvedCells.Any())
             {
                 changed = SolveEasiestMove();
             }
@@ -187,15 +198,51 @@ namespace Sudoku.Core
             return changed;
         }
 
+        public static bool TechniqueHasFalsePositives(Constants.SolvingTechnique tech)
+        {
+            IList<Constants.SolvingTechnique> techs = new List<Constants.SolvingTechnique>();
+            techs.Add(Constants.SolvingTechnique.NakedSingle);
+            techs.Add(Constants.SolvingTechnique.HiddenSingle);
+            techs.Add(tech);
+            for (int i = 0; i < 100; i++)
+            {
+                Console.WriteLine(i);
+                var game = new Board(DbHelper.GetChallengingBoard());
+                var solver = new Solver(game);
+                bool changed = true;
+
+                while (changed && !game.IsSolved())
+                {
+                    foreach (Constants.SolvingTechnique technique in techs)
+                    {
+                        changed = solver.SolveOneMove(technique);
+                        if (!game.IsValid() || game.IsInvalidatedBySolvedBoard())
+                        {
+                            return true;
+                        }
+                        if (changed) break;
+                    }
+                }
+                //if (tech == Constants.SolvingTechnique.BowmanBingo && !game.IsSolved()) return false;
+                if (!solver.GetHardestMove().Equals(tech.ToString()))
+                {
+                    i--;
+                }
+            }
+
+
+            return false;
+        }
+
         #endregion
-        
+
         #region Diagnostic Methods
 
         //The following methods are useful in analyzing the puzzle's current state
 
         public string MoveCountsToString()
         {
-            return _moveCount.Where(i => i.Value > 0).Aggregate("", (current, i) => current + $"{i.Key} - {i.Value}\n");
+            return _moveCount.Where(i => i.Value > 0).Aggregate("", (current, i) => current + $"{i.Key} - {i.Value}\n") + $"Score: {Score}\n";
         }
 
         public string GetHardestMove()
@@ -620,8 +667,7 @@ namespace Sudoku.Core
             while (indexes[indexes.Length - 1] > 0)
             {
                 Cell[] pincerCells = {potentialPincerList[indexes[0]], potentialPincerList[indexes[1]], potentialPincerList[indexes[2]]};
-                bool found = CheckForWXYZWing(pincerCells.ToList());
-                if (found) return true;
+                if(CheckForWXYZWing(pincerCells.ToList())) return true;
 
                 indexes = GetNextCombination(indexes, potentialPincerList.Count);
             }
@@ -688,7 +734,36 @@ namespace Sudoku.Core
                 }
             }
             return false;
-        } 
+        }
+
+        private bool BiValueUniversalGrave()
+        {
+            //identify if pattern is present and identify key cell
+            Cell keyCell = null;
+
+            foreach (Cell cell in ShuffledUnsolvedCells)
+            {
+                int candidateCount = cell.Candidates.Count();
+                if (candidateCount > 3) return false;
+                if (candidateCount == 2) continue;
+                if (keyCell != null) return false;
+                keyCell = cell;
+            }
+
+            //find and set to odd value
+            int[] candidates = keyCell.Candidates.GetCandidateArray();
+            House box = Board.GetHouse(House.HouseType.Box, keyCell); // House type shouldn't matter
+            foreach (int val in candidates)
+            {
+                int count = box.CountCellsWithCandidate(val);
+                if (count%2 == 1)
+                {
+                    SetCellValue(keyCell, val, Constants.SolvingTechnique.BiValueUniversalGrave);
+                    return true;
+                }
+            }
+            throw new SolvingException("BUG failed");
+        }
 
         //private bool BowmanBingo() //TODO BROKEN
         //{
@@ -759,7 +834,7 @@ namespace Sudoku.Core
                                        select cell
                                         ).OrderBy(x => Rnd.Next()).ToList();
 
-                //If there are less than [tuple] cells in this list, this method is of no use
+                //If there are less than [tuple] cells in this list, this technique is of no use
                 if (cellList.Count < tuple) continue;
 
                 // For each combination of [tuple] cells in this list, look for a set with only [tuple] unique candidates between them
@@ -1229,18 +1304,7 @@ namespace Sudoku.Core
         private bool CheckForWXYZWing(IList<Cell> pincerCells)
         {
             //Build a list of their potential candidates
-            IList<int> candidates = new List<int>();
-            foreach (Cell cell in pincerCells)
-            {
-                var candidateArr = cell.Candidates.GetCandidateArray();
-                foreach (int candidate in candidateArr)
-                {
-                    if (!candidates.Contains(candidate))
-                    {
-                        candidates.Add(candidate);
-                    }
-                }
-            }
+            IList<int> candidates = GetCandidateSet(pincerCells);
             if (candidates.Count != 4) return false;
 
             //Find hinge
@@ -1249,8 +1313,7 @@ namespace Sudoku.Core
                                && cell.CanSee(pincerCells[1])
                                && cell.CanSee(pincerCells[2])
                                && cell.Candidates.Count() <= 4).ToList();
-            if (hinges.Count == 0) return false;
-            Cell hinge = null;
+            if (!hinges.Any()) return false;
             foreach (Cell cell in hinges)
             {
                 int[] hingeCandidates = cell.Candidates.GetCandidateArray();
@@ -1264,59 +1327,58 @@ namespace Sudoku.Core
                 }
                 if (isHinge)
                 {
-                    hinge = cell;
-                }
-            }
-            if (hinge == null) return false;
-            pincerCells.Add(hinge);
-
-            //find key value and check for other non-restricted digits
-            IList<int> sharedNonRestrictedDigits = new List<int>();
-            foreach (int candidate in candidates)
-            {
-                bool isSharedNonRestrictedDigit = false;
-                int[] indexes = Enumerable.Range(0, 2).ToArray();
-                while (!isSharedNonRestrictedDigit && indexes[indexes.Length - 1] > 0)
-                {
-                    Cell cell1 = pincerCells[indexes[0]];
-                    Cell cell2 = pincerCells[indexes[1]];
-                    if (!cell1.CanSee(cell2) && cell1.CouldBe(candidate) && cell2.CouldBe(candidate))
+                    pincerCells.Add(cell);
+                    //find key value and check for other non-restricted digits
+                    IList<int> sharedNonRestrictedDigits = new List<int>();
+                    foreach (int candidate in candidates)
                     {
-                        isSharedNonRestrictedDigit = true;
-                        sharedNonRestrictedDigits.Add(candidate);
+                        bool isSharedNonRestrictedDigit = false;
+                        int[] indexes = Enumerable.Range(0, 2).ToArray();
+                        while (!isSharedNonRestrictedDigit && indexes[indexes.Length - 1] > 0)
+                        {
+                            Cell cell1 = pincerCells[indexes[0]];
+                            Cell cell2 = pincerCells[indexes[1]];
+                            if (!cell1.CanSee(cell2) && cell1.CouldBe(candidate) && cell2.CouldBe(candidate))
+                            {
+                                isSharedNonRestrictedDigit = true;
+                                sharedNonRestrictedDigits.Add(candidate);
+                            }
+                            indexes = GetNextCombination(indexes, pincerCells.Count);
+                        }
                     }
-                    indexes = GetNextCombination(indexes, pincerCells.Count);
+                    if (sharedNonRestrictedDigits.Count != 1) continue;
+                    int keyValue = sharedNonRestrictedDigits[0];
+
+                    //get a list of just the cells that contain the key Value
+                    IList<Cell> keyValCells = pincerCells.Where(c => c.CouldBe(keyValue)).ToList();
+                    if (keyValCells.Count < 2) throw new SolvingException("Something weird happened!");
+
+                    //get a list of all the cells that contain key value & can see all of these cells
+                    IList<Cell> seeingCells = new List<Cell>();
+                    foreach (Cell seeingCell in ShuffledUnsolvedCells)
+                    {
+                        if (!seeingCell.CouldBe(keyValue)) continue;
+
+                        bool canSeeAll = true;
+                        foreach (Cell keyValCell in keyValCells)
+                        {
+                            canSeeAll = seeingCell.CanSee(keyValCell) && canSeeAll;
+                        }
+                        if (canSeeAll) seeingCells.Add(seeingCell);
+                    }
+                    if (!seeingCells.Any()) continue;
+
+                    foreach (Cell seeingCell in seeingCells)
+                    {
+                        EliminateCandidate(seeingCell, keyValue);
+                    }
+                    return true;
                 }
             }
-            if (sharedNonRestrictedDigits.Count != 1) return false;
-            int keyValue = sharedNonRestrictedDigits[0];
-
-            //get a list of just the cells that contain the key Value
-            IList<Cell> keyValCells = pincerCells.Where(c => c.CouldBe(keyValue)).ToList();
-            if (keyValCells.Count < 2) throw new SolvingException("Something weird happened!");
-
-            //get a list of all the cells that contain key value & can see all of these cells
-            IList<Cell> seeingCells = new List<Cell>();
-            foreach (Cell seeingCell in ShuffledUnsolvedCells)
-            {
-                bool canSeeAll = true;
-                if (!seeingCell.CouldBe(keyValue)) continue;
-                foreach (Cell keyValCell in keyValCells)
-                {
-                    canSeeAll = seeingCell.CanSee(keyValCell) && canSeeAll;
-                }
-                if (canSeeAll) seeingCells.Add(seeingCell);
-            }
-            if (!seeingCells.Any()) return false;
-
-            foreach (Cell seeingCell in seeingCells)
-            {
-                seeingCell.Candidates.EliminateCandidate(keyValue);
-            }
-            return true;
+            return false;
         }
 
-        private static bool CheckForSueDeCoq(ICollection<Cell> baseCells, ICollection<int> baseCandidates, House box, House line)
+        private bool CheckForSueDeCoq(ICollection<Cell> baseCells, ICollection<int> baseCandidates, House box, House line)
         {
             // look for a cell in line not in box with two values from candidates
             IList<Cell> lineCells = new List<Cell>();
@@ -1373,7 +1435,7 @@ namespace Sudoku.Core
                         foreach (Cell cell in box.Cells)
                         {
                             if (cell.Equals(boxCell) || baseCells.Contains(cell)) continue;
-                            success = cell.Candidates.EliminateCandidate(val) || success;
+                            success = EliminateCandidate(cell, val)|| success;
                         }
                     }
                     foreach (int val in lineCellCandidates)
@@ -1381,7 +1443,7 @@ namespace Sudoku.Core
                         foreach (Cell cell in line.Cells)
                         {
                             if (cell.Equals(lineCell) || baseCells.Contains(cell)) continue;
-                            success = cell.Candidates.EliminateCandidate(val) || success;
+                            success = EliminateCandidate(cell, val) || success;
                         }
                     }
                     if (success) return true;
@@ -1455,42 +1517,7 @@ namespace Sudoku.Core
         {
             return inList.Where(cell => cell.Candidates.Contains(candidate)).ToArray();
         }
-
-        public static bool TechniqueHasFalsePositives(Constants.SolvingTechnique tech)
-        {
-            IList<Constants.SolvingTechnique> techs = new List<Constants.SolvingTechnique>();
-            techs.Add(Constants.SolvingTechnique.NakedSingle);
-            techs.Add(Constants.SolvingTechnique.HiddenSingle);
-            techs.Add(tech);
-            for (int i = 0; i < 100; i++)
-            {
-                Console.WriteLine(i);
-                var game = new Board(DbHelper.GetChallengingBoard());
-                var solver = new Solver(game);
-                bool changed = true;
-                while (changed)
-                {
-                    foreach (Constants.SolvingTechnique technique in techs)
-                    {
-                        changed = solver.SolveOneMove(technique);
-                        if (!game.IsValid() || game.IsInvalidatedBySolvedBoard())
-                        {
-                            return true;
-                        }
-                        if (changed) break;
-                    }
-                }
-                //if (tech == Constants.SolvingTechnique.BowmanBingo && !game.IsSolved()) return false;
-                if (!solver.GetHardestMove().Equals(tech.ToString()))
-                {
-                    i--;
-                }
-            }
-
-
-            return false;
-        }
-
+        
         public static List<int> GetCandidateSet(IEnumerable<Cell> baseCells)
         {
             var candidates = new List<int>();

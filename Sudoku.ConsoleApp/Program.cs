@@ -11,11 +11,11 @@ namespace Sudoku.ConsoleApp
     {
         public static void Main()
         {
-            SolvedUpdater();
+            //SolvedUpdater();
 
             UnsolvedUpdater();
 
-            //TestNewTechnique(Constants.SolvingTechnique.SueDeCoq);
+            //TestNewTechnique(Constants.SolvingTechnique.BiValueUniversalGrave);
 
             //PuzzleImporter();
             //MainMenu();

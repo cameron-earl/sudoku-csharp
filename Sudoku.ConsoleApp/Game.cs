@@ -7,7 +7,7 @@ namespace Sudoku.ConsoleApp
 {
     internal class Game
     {
-        private const bool Testing = true;
+        private const bool Testing = false;
 
         private ConsoleColor _labelColor = ConsoleColor.DarkGray;
         private ConsoleColor _boldFrameColor = Testing ? ConsoleColor.Black : ConsoleColor.Gray;
@@ -144,7 +144,7 @@ namespace Sudoku.ConsoleApp
                         break;
                     case 'c':
                         bool changed = true;
-                        while (changed)
+                        while (changed && !Board.IsSolved())
                         {
                             changed = Solver.SolveEasiestMove();
                             PrintAllCells();

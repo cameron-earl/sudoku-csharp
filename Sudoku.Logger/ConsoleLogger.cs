@@ -1,7 +1,7 @@
 ﻿using System;
 using Sudoku.Core;
 
-namespace FolderTransfer.Logger
+namespace Sudoku.Logger
 {
     public class ConsoleLogger : ILogger
     {

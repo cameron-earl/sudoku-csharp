@@ -1,7 +1,7 @@
 ﻿using System.Data.SqlClient;
 using Sudoku.Core;
 
-namespace FolderTransfer.Logger
+namespace Sudoku.Logger
 {
     public class SqlLogger : ILogger
     {

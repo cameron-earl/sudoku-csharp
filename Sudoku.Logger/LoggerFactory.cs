@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Sudoku.Core;
 
-namespace FolderTransfer.Logger
+namespace Sudoku.Logger
 {
     public static class LoggerFactory
     {

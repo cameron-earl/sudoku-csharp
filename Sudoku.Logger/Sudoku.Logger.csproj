@@ -7,8 +7,8 @@
     <ProjectGuid>{1F56EECC-C2D8-4053-8916-CF8EA35EFA1E}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>FolderTransfer.Logger</RootNamespace>
-    <AssemblyName>FolderTransfer.Logger</AssemblyName>
+    <RootNamespace>Sudoku.Logger</RootNamespace>
+    <AssemblyName>Sudoku.Logger</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

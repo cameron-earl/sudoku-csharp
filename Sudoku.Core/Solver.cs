@@ -241,6 +241,18 @@ namespace Sudoku.Core
             }
         }
 
+        public int GetHardestMoveCount()
+        {
+            try
+            {
+                return _moveCount.Last(i => i.Value > 0).Value;
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
+        }
+
         #endregion
 
         #region Named Solving Techniques

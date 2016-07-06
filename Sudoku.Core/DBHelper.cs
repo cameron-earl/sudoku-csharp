@@ -34,7 +34,8 @@ namespace Sudoku.Core
             var solver = new Solver(b);
             bool isSolved = solver.SolvePuzzle();
             string solvedValues = new Regex("[\\D]").Replace(b.ToSimpleString(), "");
-            string thisHardestMove = solver.GetHardestMove().Trim();
+            string thisHardestMove = solver.GetHardestMove();
+            int thisHardestMoveCount = solver.GetHardestMoveCount();
             string oldHardestMove = null;
             string newHardestMove = null;
             int unsolvedId = -1;
@@ -56,7 +57,7 @@ namespace Sudoku.Core
                     while (reader.Read())
                     {
                         solvedId = reader.GetInt32(0);
-                        oldHardestMove = reader.GetString(1).Trim();
+                        oldHardestMove = reader.GetString(1);
                         timesPlayed = reader.GetInt32(2);
                     }
                     conn.Close();
@@ -77,8 +78,7 @@ namespace Sudoku.Core
 
                         //Increment TimesPlayed for existing solved table
                         timesPlayed = (timesPlayed > -1) ? timesPlayed + 1 : timesPlayed;
-
-                        cmd.CommandText = $"UPDATE dbo.Boards SET HardestMove = '{newHardestMove}', Score={solver.Score}, TimesPlayed = {timesPlayed} WHERE Id = {solvedId}";
+                        cmd.CommandText = $"UPDATE dbo.Boards SET HardestMove = '{newHardestMove}', Score={solver.Score}, TimesPlayed = {timesPlayed}, HardestMoveCount={thisHardestMoveCount} WHERE Id = {solvedId}";
                         conn.Open();
                         cmd.ExecuteNonQuery();
                         conn.Close();
@@ -121,7 +121,7 @@ namespace Sudoku.Core
                 else if (isSolved && solvedId == -1)
                 {
                     cmd = new SqlCommand(
-                        $"INSERT INTO dbo.Boards (Puzzle, Score, SolvedValues, HardestMove, TimesPlayed) VALUES ('{boardStr}',{solver.Score},'{solvedValues}','{newHardestMove}',1)",
+                        $"INSERT INTO dbo.Boards (Puzzle, Score, SolvedValues, HardestMove, TimesPlayed, HardestMoveCount) VALUES ('{boardStr}',{solver.Score},'{solvedValues}','{newHardestMove}',1,{thisHardestMoveCount})",
                         conn);
                     cmd.Connection.Open();
                     cmd.ExecuteNonQuery();

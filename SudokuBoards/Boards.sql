@@ -6,5 +6,6 @@
     [Score] INT NULL, 
     [SolvedValues] NVARCHAR(81) NULL, 
     [HardestMove] NVARCHAR(50) NULL, 
-    [TimesPlayed] INT NOT NULL DEFAULT 0
+    [TimesPlayed] INT NOT NULL DEFAULT 0, 
+    [HardestMoveCount] INT NULL 
 )

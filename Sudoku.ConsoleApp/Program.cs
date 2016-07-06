@@ -22,6 +22,7 @@ namespace Sudoku.ConsoleApp
             //    UnsolvedUpdater(15 -  i);
             //}
             
+            SolvedUpdater();
 
             //TestNewTechnique(Constants.SolvingTechnique.BiValueUniversalGrave);
 
@@ -45,7 +46,7 @@ namespace Sudoku.ConsoleApp
         /// Takes a while because all puzzles require lots of technique attempts
         /// </summary>
         // ReSharper disable once UnusedMember.Local
-        private static void UnsolvedUpdater(int numberOfPuzzles)
+        private static void UnsolvedUpdater(int numberOfPuzzles = 0)
         {
             Stopwatch runTime = Stopwatch.StartNew();
             string topString = numberOfPuzzles > 0 ? $"TOP {numberOfPuzzles} " : "";
@@ -84,7 +85,7 @@ namespace Sudoku.ConsoleApp
         /// If hardest move is easier, will update hardest move
         /// Eventually will score puzzles
         /// </summary>
-        private static void SolvedUpdater(int numberOfPuzzles)
+        private static void SolvedUpdater(int numberOfPuzzles = 0)
         {
             Stopwatch runTime = Stopwatch.StartNew();
             

@@ -27,7 +27,9 @@ namespace Sudoku.ConsoleApp
             //TestNewTechnique(Constants.SolvingTechnique.BiValueUniversalGrave);
 
             //PuzzleImporter();
-            MainMenu();
+            //MainMenu();
+
+
             WriteLine("Farewell!");
             ReadKey();
         }

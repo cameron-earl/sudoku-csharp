@@ -38,6 +38,7 @@ namespace Sudoku.Core
             int thisHardestMoveCount = solver.GetHardestMoveCount();
             string oldHardestMove = null;
             string newHardestMove = null;
+            int hardestMoveCount = -1;
             int unsolvedId = -1;
             int solvedId = -1;
             int timesPlayed = -1;
@@ -48,7 +49,7 @@ namespace Sudoku.Core
                 //Check solved table for matching entry
                 var cmd = new SqlCommand()
                 {
-                    CommandText = $"SELECT TOP 1 Id, HardestMove, TimesPlayed FROM dbo.Boards WHERE Puzzle='{boardStr}'",
+                    CommandText = $"SELECT TOP 1 Id, HardestMove, TimesPlayed, HardestMoveCount FROM dbo.Boards WHERE Puzzle='{boardStr}'",
                     Connection = conn
                 };
                 conn.Open();
@@ -59,6 +60,7 @@ namespace Sudoku.Core
                         solvedId = reader.GetInt32(0);
                         oldHardestMove = reader.GetString(1);
                         timesPlayed = reader.GetInt32(2);
+                        hardestMoveCount = reader.GetInt32(3);
                     }
                     conn.Close();
                 }
@@ -66,19 +68,26 @@ namespace Sudoku.Core
                 if (isSolved)
                 {
                     newHardestMove = (oldHardestMove == null) ? thisHardestMove : Constants.GetEasiestMove(thisHardestMove, oldHardestMove);
+                    
                     // If it was found in database
                     if (solvedId >= 1) 
                     {
                         // Update hardest move
                         if (!newHardestMove.Equals(oldHardestMove))
                         {
-                            Console.WriteLine($"Easier route found: hardest move changed from {oldHardestMove} to {newHardestMove}");
+                            Console.WriteLine(
+                                $"Easier route found: hardest move changed from {oldHardestMove} to {newHardestMove}");
+                            hardestMoveCount = thisHardestMoveCount;
+                        }
+                        else if (thisHardestMoveCount < hardestMoveCount || hardestMoveCount == -1)
+                        {
+                            hardestMoveCount = thisHardestMoveCount;
                         }
                         
 
                         //Increment TimesPlayed for existing solved table
                         timesPlayed = (timesPlayed > -1) ? timesPlayed + 1 : timesPlayed;
-                        cmd.CommandText = $"UPDATE dbo.Boards SET HardestMove = '{newHardestMove}', Score={solver.Score}, TimesPlayed = {timesPlayed}, HardestMoveCount={thisHardestMoveCount} WHERE Id = {solvedId}";
+                        cmd.CommandText = $"UPDATE dbo.Boards SET HardestMove='{newHardestMove}', Score={solver.Score}, TimesPlayed={timesPlayed}, HardestMoveCount={hardestMoveCount} WHERE Id = {solvedId}";
                         conn.Open();
                         cmd.ExecuteNonQuery();
                         conn.Close();

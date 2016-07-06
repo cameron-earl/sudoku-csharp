@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
-using System.Xml.Schema;
 
 namespace Sudoku.Core
 {
@@ -28,40 +27,23 @@ namespace Sudoku.Core
         
         private Cell[] ShuffledCells
         {
-            get
-            {
-                if (_shuffledCells == null)
-                {
-                    _shuffledCells = Board.Cells.OrderBy(x => Rnd.Next()).ToArray();
-                }
-                return _shuffledCells;
-
-            }
+            get { return _shuffledCells ?? 
+                    (_shuffledCells = Board.Cells.OrderBy(x => Rnd.Next()).ToArray()); }
             set { _shuffledCells = value; }
         }
 
         private House[] ShuffledHouses
         {
-            get
-            {
-                if (_shuffledHouses == null)
-                {
-                    _shuffledHouses = Board.Houses.OrderBy(x => Rnd.Next()).ToArray();
-                }
-                return _shuffledHouses;
-            }
+            get { return _shuffledHouses ?? 
+                    (_shuffledHouses = Board.Houses.OrderBy(x => Rnd.Next()).ToArray()); }
             set { _shuffledHouses = value; }
         }
 
         private int[] ShuffledValues
         {
-            get
-            {
-                if (_shuffledValues == null)
-                {
-                    _shuffledValues = Enumerable.Range(1, Constants.BoardLength).OrderBy(x => Rnd.Next()).ToArray();
-                }
-                return _shuffledValues;
+            get {
+                return _shuffledValues ??
+                       (_shuffledValues = Enumerable.Range(1, Constants.BoardLength).OrderBy(x => Rnd.Next()).ToArray());
             }
             set { _shuffledValues = value; }
         }
@@ -103,11 +85,11 @@ namespace Sudoku.Core
         public bool SolveEasiestMove()
         {
             bool moveSolved = false;
-            for (var method = Constants.SolvingTechnique.NakedSingle;
-                    !moveSolved && method < Constants.SolvingTechnique.Unsolved;
-                    method++)
+            for (var technique = Constants.SolvingTechnique.NakedSingle;
+                    !moveSolved && technique < Constants.SolvingTechnique.Unsolved;
+                    technique++)
             {
-                moveSolved = SolveOneMove(method);
+                moveSolved = SolveOneMove(technique);
             }
             return moveSolved;
         }
@@ -144,6 +126,7 @@ namespace Sudoku.Core
                 }
                 ResetTechniqueFields();
                 LastMove = technique;
+                Board.IsSolved();
             }
             return moveSolved;
         }
@@ -163,6 +146,7 @@ namespace Sudoku.Core
             while (changed && ShuffledUnsolvedCells.Any())
             {
                 changed = SolveEasiestMove();
+                ResetTechniqueFields();
             }
             return Board.IsSolved();
         }
@@ -443,12 +427,12 @@ namespace Sudoku.Core
             return BasicFish(2);
         }
 
-        private bool SwordFish()
+        private bool Swordfish()
         {
             return BasicFish(3);
         }
 
-        private bool JellyFish()
+        private bool Jellyfish()
         {
             return BasicFish(4);
         }
@@ -738,6 +722,9 @@ namespace Sudoku.Core
 
         private bool BiValueUniversalGrave()
         {
+            // This prevents an error if it is called on a solved board
+            if (!ShuffledUnsolvedCells.Any()) return false;
+
             //identify if pattern is present and identify key cell
             Cell keyCell = null;
 

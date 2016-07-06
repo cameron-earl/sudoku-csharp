@@ -51,6 +51,10 @@
       <Project>{33797d82-c63a-4e84-b643-11a013dbaabb}</Project>
       <Name>FolderTransfer.Core</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Sudoku.Core\Sudoku.Core.csproj">
+      <Project>{534CF436-DBCE-4E3E-9122-004C6D77ACDE}</Project>
+      <Name>Sudoku.Core</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

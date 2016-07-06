@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using FolderTransfer.Core;
+using Sudoku.Core;
 
 namespace FolderTransfer.Logger
 {

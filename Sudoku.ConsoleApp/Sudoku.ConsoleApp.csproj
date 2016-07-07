@@ -59,6 +59,10 @@
       <Project>{534CF436-DBCE-4E3E-9122-004C6D77ACDE}</Project>
       <Name>Sudoku.Core</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Sudoku.Logger\Sudoku.Logger.csproj">
+      <Project>{1F56EECC-C2D8-4053-8916-CF8EA35EFA1E}</Project>
+      <Name>Sudoku.Logger</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

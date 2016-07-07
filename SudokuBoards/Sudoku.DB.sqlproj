@@ -63,6 +63,7 @@
     <Build Include="UnsolvedBoards.sql" />
     <Build Include="GetNumberOfPuzzlesEachType.sql" />
     <Build Include="Techniques.sql" />
+    <Build Include="FindExemplars.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="Sudoku.DB.refactorlog" />

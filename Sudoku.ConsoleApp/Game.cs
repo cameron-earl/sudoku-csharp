@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text.RegularExpressions;
 using Sudoku.Core;
+using Sudoku.Logger;
 using static System.Console;
 
 namespace Sudoku.ConsoleApp
@@ -21,7 +22,7 @@ namespace Sudoku.ConsoleApp
         public Game(Board board)
         {
             Board = board;
-            Solver = new Solver(board);
+            Solver = new Solver(board, new ConsoleLogger());
         }
 
         public Solver Solver { get; set; }

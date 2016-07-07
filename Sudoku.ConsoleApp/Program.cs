@@ -5,12 +5,17 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using Sudoku.Core;
+using Sudoku.Logger;
 using static System.Console;
 
 namespace Sudoku.ConsoleApp
 {
+
     public class Program
     {
+        private static ILogger _logger = new ConsoleLogger();
+        private static DbHelper _db = new DbHelper(_logger);
+
         public static void Main()
         {
             //for (int i = 0; i < 10; i++)
@@ -21,10 +26,13 @@ namespace Sudoku.ConsoleApp
             //{
             //    UnsolvedUpdater(15 -  i);
             //}
-            
-            SolvedUpdater();
 
-            //TestNewTechnique(Constants.SolvingTechnique.BiValueUniversalGrave);
+            //for (int i = 0; i < 50; i++)
+            //{
+            //    SolvedUpdater(); 
+            //}
+            UnsolvedUpdater();
+            TestNewTechnique(Constants.SolvingTechnique.BiValueUniversalGrave);
 
             //PuzzleImporter();
             //MainMenu();
@@ -67,7 +75,7 @@ namespace Sudoku.ConsoleApp
                         if (new Solver(new Board(boardStr)).SolvePuzzle())
                         {
                             newSolveCount++;
-                            DbHelper.UpdateBoardInDatabase(boardStr);
+                            _db.UpdateBoardInDatabase(boardStr);
                             Write(".");
                         }
                     }
@@ -102,7 +110,7 @@ namespace Sudoku.ConsoleApp
                     while (reader.Read())
                     {
                         string boardStr = reader.GetString(0);
-                        DbHelper.UpdateBoardInDatabase(boardStr);
+                        _db.UpdateBoardInDatabase(boardStr);
                     }
                     conn.Close();
                 }
@@ -127,7 +135,7 @@ namespace Sudoku.ConsoleApp
             {
                 count++;
                 if (count % 500 == 0) WriteLine(count);
-                DbHelper.UpdateBoardInDatabase(line.Replace(".","0"));
+               _db.UpdateBoardInDatabase(line.Replace(".","0"));
             }
         }
 
@@ -208,7 +216,7 @@ namespace Sudoku.ConsoleApp
             var testBoard = new Board(boardStr);
             var thisGame = new Game(testBoard);
             thisGame.Play();
-            DbHelper.UpdateBoardInDatabase(boardStr);
+            _db.UpdateBoardInDatabase(boardStr);
         }
 
         

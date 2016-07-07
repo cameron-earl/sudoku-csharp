@@ -384,16 +384,8 @@ namespace Sudoku.Core
                     {
                         if (Logger != null)
                         {
-                            string solvedCellsString = solvedCells[0].CellCoordinateToString();
-                            for (int i = 1; i < solvedCells.Count - 1; i++)
-                            {
-                                solvedCellsString += $", {solvedCells[i].CellCoordinateToString()}";
-                            }
-                            if (solvedCells.Count > 1)
-                            {
-                                solvedCellsString += $" and {solvedCells[solvedCells.Count - 1].CellCoordinateToString()}";
-                            }
-                            Logger.Info($"Intersection Removal: Removed {val} from {solvedCellsString}."); 
+                            string solvedCellsString = CellListToString(solvedCells);
+                            Logger.Info($"Intersection Removal: Eliminated {val} from {solvedCellsString}.");
                         }
                         return true;
                     }
@@ -401,7 +393,7 @@ namespace Sudoku.Core
             }
             return false;
         }
-
+        
         /// <summary>
         /// Starting with a random house, find three cells with the same three candidates between them. Remove the candidates from
         /// all other cells in the house.
@@ -590,7 +582,7 @@ namespace Sudoku.Core
 
                     //if both are internally consistent, check all other unsolved cells not in a chain if they see cells of both colors. 
                     //if so, remove candidate from cell
-                    bool changed = false;
+                    IList<Cell> solvedCells = new List<Cell>();
                     foreach (Cell cell in Board.Cells)
                     {
                         if (cell.IsSolved()
@@ -615,10 +607,21 @@ namespace Sudoku.Core
                             sawOne = cell.CanSee(chainCell);
                         }
                         if (sawOne == false) continue;
-                        
-                        changed = EliminateCandidate(cell, val) || changed;
+
+                        if (EliminateCandidate(cell, val))
+                        {
+                            solvedCells.Add(cell);
+                        }
                     }
-                    if (changed) return true;
+                    if (solvedCells.Any())
+                    {
+                        if (Logger != null)
+                        {
+                            string solvedCellsString = CellListToString(solvedCells);
+                            Logger.Info($"Simple Coloring: Eliminated {val} from {solvedCellsString}.");
+                        }
+                        return true;
+                    }
 
                     //if not, remove all cells in blue and green chains from shuffledChainSeeds and start with a new seed
                     foreach (List<Cell> coloringChain in coloringChains)
@@ -739,6 +742,7 @@ namespace Sudoku.Core
                 int count = box.CountCellsWithCandidate(val);
                 if (count%2 == 1)
                 {
+                    Logger?.Info($"BUG technique: To avoid an unsolvable board, {keyCell.CellCoordinateToString()} has to be {val}");
                     SetCellValue(keyCell, val, Constants.SolvingTechnique.BiValueUniversalGrave);
                     return true;
                 }
@@ -788,25 +792,23 @@ namespace Sudoku.Core
 
         private bool NakedTuple(int tuple)
         {
-            bool changed = false;
-
             foreach (House house in ShuffledHouses)
             {
                 //If there are less than tuple*2 cells, there should be a corresponding HiddenTuple of smaller size.
                 //But that doesn't seem to be the case.
 
                 //Get list of house's unsolved candidates ready
-                var candidateList = new List<int>();
+                var allUnsolvedCandidates = new List<int>();
                 for (int val = 1; val <= Constants.BoardLength; val++)
                 {
                     if (!house.Contains(val))
                     {
-                        candidateList.Add(val);
+                        allUnsolvedCandidates.Add(val);
                     }
                 }
 
                 // If the house has <= tuple candidates, there is nothing to eliminate
-                if (candidateList.Count <= tuple) continue;
+                if (allUnsolvedCandidates.Count <= tuple) continue;
 
                 //Get random-order list of all cells with multiple but at most [tuple] candidates
                 List<Cell> cellList = (from cell in house.Cells
@@ -825,18 +827,18 @@ namespace Sudoku.Core
                 
                 while (indexes[indexes.Length - 1] > 0)
                 {
-                    ISet<int> candidateSet = new SortedSet<int>();
+                    IList<int> sharedCandidates = new List<int>();
                     foreach (int index in indexes)
                     {
-                        foreach (int cand in candidateList)
+                        foreach (int cand in allUnsolvedCandidates)
                         {
-                            if (cellList[index].Candidates.Contains(cand))
+                            if (cellList[index].Candidates.Contains(cand) && !sharedCandidates.Contains(cand))
                             {
-                                candidateSet.Add(cand);
+                                sharedCandidates.Add(cand);
                             }
                         }
                     }
-                    if (candidateSet.Count == tuple) // Success! Remove these candidates from all other cells in house
+                    if (sharedCandidates.Count == tuple) // Success! Remove these candidates from all other cells in house
                     {
                         //trim these three cells from cell list
                         for (int i = indexes.Length - 1; i >= 0; i--)
@@ -844,14 +846,28 @@ namespace Sudoku.Core
                             cellList.RemoveAt(indexes[i]);
                         }
                         //for each cell in the list, remove each candidate in the set
+                        IList<Cell> solvedCells = new List<Cell>();
                         foreach (Cell cell in cellList)
                         {
-                            foreach (int val in candidateSet)
+                            foreach (int val in sharedCandidates)
                             {
-                                changed = EliminateCandidate(cell, val) || changed;
+                                if (EliminateCandidate(cell, val) && !solvedCells.Contains(cell))
+                                {
+                                    solvedCells.Add(cell);
+                                }
                             }
                         }
-                        if (changed) return true;
+                        if (solvedCells.Any())
+                        {
+                            if (Logger != null)
+                            {
+                                string tupleString = tuple == 2 ? "double" : tuple == 3 ? "triple" : "quad";
+                                string solvedCellsString = CellListToString(solvedCells);
+                                string valList = NumberListToString(sharedCandidates);
+                                Logger.Info($"Naked {tupleString}: Eliminated {valList} from {solvedCellsString}.");
+                            }
+                            return true;
+                        }
                     }
 
                     indexes = GetNextCombination(indexes, cellList.Count);
@@ -904,19 +920,31 @@ namespace Sudoku.Core
                     }
                     if (cellSet.Count == tuple) //Success! Remove all other candidates from those cells
                     {
-                        bool changed = false;
                         IList<int> candidates = indexes.Select(index => candidateList[index]).ToList();
-
+                        IList<Cell> solvedCells = new List<Cell>();
                         foreach (Cell cell in cellSet)
                         {
                             for (int val = 1; val <= Constants.BoardLength; val++)
                             {
                                 if (candidates.Contains(val)) continue;
-                                changed = EliminateCandidate(cell, val) || changed;
+                                if (EliminateCandidate(cell, val))
+                                {
+                                    solvedCells.Add(cell);
+                                }
                             }
                         }
-                        if (changed)
+                        if (solvedCells.Any())
+                        {
+                            if (Logger != null)
+                            {
+                                string tupleString = tuple == 2 ? "double" : tuple == 3 ? "triple" : "quad";
+                                string solvedCellsString = CellListToString(solvedCells);
+                                string valList = NumberListToString(candidates);
+                                Logger.Info($"Hidden {tupleString}: Eliminated {valList} from {solvedCellsString}.");
+                            }
                             return true;
+                        }
+                            
                     }
 
                     indexes = GetNextCombination(indexes, candidateList.Count);
@@ -1476,8 +1504,7 @@ namespace Sudoku.Core
             }
             return indexes;
         }
-
-
+        
         /// <summary>
         /// Returns the last index that is at least two apart from the one after it
         /// Returns -1 if no such index exists (or the pattern for the whole array is arr[i+1} = arr[i]+1)
@@ -1512,6 +1539,7 @@ namespace Sudoku.Core
             }
             return candidates;
         }
+
         public static bool TechniqueHasFalsePositives(Constants.SolvingTechnique tech)
         {
             IList<Constants.SolvingTechnique> techs = new List<Constants.SolvingTechnique>();
@@ -1551,6 +1579,33 @@ namespace Sudoku.Core
             return false;
         }
 
+        private static string CellListToString(IList<Cell> cells)
+        {
+            string cellListString = cells[0].CellCoordinateToString();
+            for (int i = 1; i < cells.Count - 1; i++)
+            {
+                cellListString += $", {cells[i].CellCoordinateToString()}";
+            }
+            if (cells.Count > 1)
+            {
+                cellListString += $" and {cells[cells.Count - 1].CellCoordinateToString()}";
+            }
+            return cellListString;
+        }
+
+        private static string NumberListToString(IList<int> nums)
+        {
+            string listString = $"{nums[0]}";
+            for (int i = 1; i < nums.Count - 1; i++)
+            {
+                listString += $", {nums[0]}";
+            }
+            if (nums.Count > 1)
+            {
+                listString += $" and {nums[nums.Count - 1]}";
+            }
+            return listString;
+        }
         #endregion
 
     }

@@ -90,7 +90,7 @@ namespace Sudoku.Core
                                 $"Easier route found: hardest move changed from {oldHardestMove} to {newHardestMove}");
                             hardestMoveCount = thisHardestMoveCount;
                         }
-                        else if (thisHardestMoveCount < hardestMoveCount || hardestMoveCount == -1) //TODO what if thishardestmove > oldhardestmove?
+                        else if (thisHardestMove.Equals(oldHardestMove) && (thisHardestMoveCount < hardestMoveCount || hardestMoveCount == -1)) //TODO what if thishardestmove > oldhardestmove?
                         {
                             Logger?.Info($"Lowering move count for {newHardestMove} board");
                             hardestMoveCount = thisHardestMoveCount;

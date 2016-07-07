@@ -1,14 +1,21 @@
 ﻿using System;
 using System.Data.SqlClient;
 using System.Text.RegularExpressions;
+using Microsoft.Win32;
 
 namespace Sudoku.Core
 {
-    public static class DbHelper
+    public class DbHelper
     {
         public const string ConnStr =
             "Data Source=(localdb)\\ProjectsV13;Initial Catalog=Sudoku.DB;Integrated Security=True";
 
+        public DbHelper(ILogger logger = null)
+        {
+            Logger = logger;
+        }
+
+        public ILogger Logger { get; set; }
 
         /// <summary>
         /// If a board exists in solved database, will increment playcount.
@@ -17,7 +24,7 @@ namespace Sudoku.Core
         /// </summary>
         /// <param name="boardStr"></param>
         /// <returns></returns>
-        public static void UpdateBoardInDatabase(string boardStr) //TODO add logger?
+        public void UpdateBoardInDatabase(string boardStr)
         {
             //Validate input
             boardStr = new Regex("[\\D]").Replace(boardStr, "");
@@ -25,8 +32,12 @@ namespace Sudoku.Core
             var b = new Board(boardStr);
             if (!b.IsValid() || !b.IsUnique() || b.IsSolved())
             {
-                //Console.WriteLine("Board not added to database because it's invalid, not unique, or already solved.");
-                //Console.ReadKey();
+                string reasons = !b.IsValid()
+                    ? "it isn't valid"
+                        : b.IsSolved() ? "all cells are already solved." 
+                                        : "there are multiple valid solutions";
+                
+                Logger?.Error($"Puzzle not added to database because {reasons}.");
                 return;
             }
 
@@ -75,12 +86,13 @@ namespace Sudoku.Core
                         // Update hardest move
                         if (!newHardestMove.Equals(oldHardestMove))
                         {
-                            Console.WriteLine(
+                            Logger?.Info(
                                 $"Easier route found: hardest move changed from {oldHardestMove} to {newHardestMove}");
                             hardestMoveCount = thisHardestMoveCount;
                         }
-                        else if (thisHardestMoveCount < hardestMoveCount || hardestMoveCount == -1)
+                        else if (thisHardestMoveCount < hardestMoveCount || hardestMoveCount == -1) //TODO what if thishardestmove > oldhardestmove?
                         {
+                            Logger?.Info($"Lowering move count for {newHardestMove} board");
                             hardestMoveCount = thisHardestMoveCount;
                         }
                         
@@ -91,8 +103,6 @@ namespace Sudoku.Core
                         conn.Open();
                         cmd.ExecuteNonQuery();
                         conn.Close();
-                        //Console.WriteLine("Board found in database, times played incremented.");
-                        //Console.ReadKey();
                         return;
                     } 
                 }
@@ -122,8 +132,7 @@ namespace Sudoku.Core
                     cmd.Connection.Open();
                     cmd.ExecuteNonQuery();
                     cmd.Connection.Close();
-                    //Console.WriteLine("Board added to unsolved database.");
-                    //Console.ReadKey();
+                    Logger?.Info("Board added to unsolved database.");
                 }
 
                 //Add new board to solved table
@@ -135,8 +144,7 @@ namespace Sudoku.Core
                     cmd.Connection.Open();
                     cmd.ExecuteNonQuery();
                     cmd.Connection.Close();
-                    //Console.WriteLine("Board added to solved database.");
-                    //Console.ReadKey();
+                    Logger?.Info("Board added to solved database.");
                 }
 
                 //Remove from unsolved table
@@ -148,8 +156,6 @@ namespace Sudoku.Core
                     cmd.Connection.Open();
                     cmd.ExecuteNonQuery();
                     cmd.Connection.Close();
-                    //Console.WriteLine("Board removed from unsolved database.");
-                    //Console.ReadKey();
                 }
 
                 //Remove from solved table
@@ -161,8 +167,7 @@ namespace Sudoku.Core
                     cmd.Connection.Open();
                     cmd.ExecuteNonQuery();
                     cmd.Connection.Close();
-                    Console.WriteLine($"Board removed from solveDB: {oldHardestMove}");
-                    //Console.ReadKey();
+                    Logger?.Error($"Board removed from solveDB: {oldHardestMove}");
                 }
 
             }

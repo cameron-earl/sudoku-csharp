@@ -65,7 +65,7 @@ namespace Sudoku.Core
         #endregion
 
         #region Constructors
-        public Solver(Board board)
+        public Solver(Board board, ILogger logger = null)
         {
             Board = board;
             foreach (Constants.SolvingTechnique method in Enum.GetValues(typeof(Constants.SolvingTechnique)))
@@ -79,6 +79,9 @@ namespace Sudoku.Core
         public Board Board { get; set; }
 
         public int Score { get; private set; }
+
+        private ILogger Logger { get; set; }
+
         #endregion
 
         #region Action/Solving Methods
@@ -182,42 +185,6 @@ namespace Sudoku.Core
             return changed;
         }
 
-        public static bool TechniqueHasFalsePositives(Constants.SolvingTechnique tech)
-        {
-            IList<Constants.SolvingTechnique> techs = new List<Constants.SolvingTechnique>();
-            techs.Add(Constants.SolvingTechnique.NakedSingle);
-            techs.Add(Constants.SolvingTechnique.HiddenSingle);
-            techs.Add(tech);
-            for (int i = 0; i < 100; i++)
-            {
-                Console.WriteLine(i);
-                var game = new Board(DbHelper.GetChallengingBoard());
-                var solver = new Solver(game);
-                bool changed = true;
-
-                while (changed && !game.IsSolved())
-                {
-                    foreach (Constants.SolvingTechnique technique in techs)
-                    {
-                        changed = solver.SolveOneMove(technique);
-                        if (!game.IsValid() || game.IsInvalidatedBySolvedBoard())
-                        {
-                            return true;
-                        }
-                        if (changed) break;
-                    }
-                }
-                //if (tech == Constants.SolvingTechnique.BowmanBingo && !game.IsSolved()) return false;
-                if (!solver.GetHardestMove().Equals(tech.ToString()))
-                {
-                    i--;
-                }
-            }
-
-
-            return false;
-        }
-
         #endregion
 
         #region Diagnostic Methods
@@ -271,8 +238,8 @@ namespace Sudoku.Core
             {
                 if (cell.Candidates.SolvedValue == 0) continue;
                 
+                Logger?.Info($"Naked Single: {cell.Candidates.SolvedValue} is the last valid candidate in {cell.CellCoordinateToString()}.");
                 SetCellValue(cell, cell.Candidates.SolvedValue, Constants.SolvingTechnique.NakedSingle);
-
                 return true;
             }
             return false;
@@ -305,6 +272,7 @@ namespace Sudoku.Core
 
                     if (candidateCount == 1  && lastCell != null)
                     {
+                        Logger?.Info($"Hidden Single: {val} is a candidate in only {lastCell.CellCoordinateToString()} in {house.MyHouseType} {house.HouseNumber}.");
                         SetCellValue(lastCell, val, Constants.SolvingTechnique.HiddenSingle);
                         return true;
                     }
@@ -341,8 +309,6 @@ namespace Sudoku.Core
         /// <returns></returns>
         private bool IntersectionRemoval()
         {
-            bool changed = false;
-            
             House[] houseArray = Board.GetShuffledCopyOfHouseArray(Rnd);
 
             foreach (House house in houseArray)
@@ -382,13 +348,14 @@ namespace Sudoku.Core
                         continue;
                     }
                     // Otherwise, remove candidate from all other cells in two shared houses
+                    IList<Cell> solvedCells = new List<Cell>();
                     if (shareBox)
                     {
                         foreach (Cell cell in Board.Boxes[boxNum - 1].Cells)
                         {
-                            if (!cellArr.Contains(cell))
+                            if (!cellArr.Contains(cell) && EliminateCandidate(cell, val))
                             {
-                                changed = EliminateCandidate(cell, val) || changed;
+                                solvedCells.Add(cell);
                             }
                         }
                     }
@@ -396,9 +363,9 @@ namespace Sudoku.Core
                     {
                         foreach (Cell cell in Board.Rows[rowNum - 1].Cells)
                         {
-                            if (!cellArr.Contains(cell))
+                            if (!cellArr.Contains(cell) && EliminateCandidate(cell, val))
                             {
-                                changed = EliminateCandidate(cell, val) || changed;
+                                solvedCells.Add(cell);
                             }
                         }
                     }
@@ -406,14 +373,30 @@ namespace Sudoku.Core
                     {
                         foreach (Cell cell in Board.Columns[colNum - 1].Cells)
                         {
-                            if (!cellArr.Contains(cell))
+                            if (!cellArr.Contains(cell) && EliminateCandidate(cell, val))
                             {
-                                changed = EliminateCandidate(cell, val) || changed;
+                                solvedCells.Add(cell);
                             }
                         }
                     }
 
-                    if (changed) return true;
+                    if (solvedCells.Any()) //Success!
+                    {
+                        if (Logger != null)
+                        {
+                            string solvedCellsString = solvedCells[0].CellCoordinateToString();
+                            for (int i = 1; i < solvedCells.Count - 1; i++)
+                            {
+                                solvedCellsString += $", {solvedCells[i].CellCoordinateToString()}";
+                            }
+                            if (solvedCells.Count > 1)
+                            {
+                                solvedCellsString += $" and {solvedCells[solvedCells.Count - 1].CellCoordinateToString()}";
+                            }
+                            Logger.Info($"Intersection Removal: Removed {val} from {solvedCellsString}."); 
+                        }
+                        return true;
+                    }
                 }
             }
             return false;
@@ -541,13 +524,13 @@ namespace Sudoku.Core
 
         private bool YWing()
         {
-            return Wing(false);
+            return Wing(isXYZWing: false);
         }
 
         // ReSharper disable once InconsistentNaming
         private bool XYZWing()
         {
-            return Wing(true);
+            return Wing(isXYZWing: true);
         }
 
         private bool SimpleColoring()
@@ -632,8 +615,7 @@ namespace Sudoku.Core
                             sawOne = cell.CanSee(chainCell);
                         }
                         if (sawOne == false) continue;
-
-                        //if (Board.SolvedBoard.GetCell(cell.CellId).Value == val) throw new Exception("I was about to do something bad.");
+                        
                         changed = EliminateCandidate(cell, val) || changed;
                     }
                     if (changed) return true;
@@ -1529,6 +1511,44 @@ namespace Sudoku.Core
                 }
             }
             return candidates;
+        }
+        public static bool TechniqueHasFalsePositives(Constants.SolvingTechnique tech)
+        {
+            IList<Constants.SolvingTechnique> techs = new List<Constants.SolvingTechnique>();
+            techs.Add(Constants.SolvingTechnique.NakedSingle);
+            techs.Add(Constants.SolvingTechnique.HiddenSingle);
+            techs.Add(tech);
+            for (int i = 0; i < 100; i++)
+            {
+                var game = new Board(DbHelper.GetChallengingBoard());
+                var solver = new Solver(game);
+                bool changed = true;
+
+                while (changed && !game.IsSolved())
+                {
+                    foreach (Constants.SolvingTechnique technique in techs)
+                    {
+                        changed = solver.SolveOneMove(technique);
+                        if (!game.IsValid() || game.IsInvalidatedBySolvedBoard())
+                        {
+                            return true;
+                        }
+                        if (changed) break;
+                    }
+                }
+                //if (tech == Constants.SolvingTechnique.BowmanBingo && !game.IsSolved()) return false;
+                if (!solver.GetHardestMove().Equals(tech.ToString()))
+                {
+                    i--;
+                }
+                else
+                {
+                    //Logger.Info(i);
+                }
+            }
+
+
+            return false;
         }
 
         #endregion

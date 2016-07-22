@@ -27,12 +27,14 @@ namespace Sudoku.ConsoleApp
             //    UnsolvedUpdater(15 -  i);
             //}
 
-            //for (int i = 0; i < 50; i++)
-            //{
-            //    SolvedUpdater(); 
-            //}
-            UnsolvedUpdater();
-            TestNewTechnique(Constants.SolvingTechnique.BiValueUniversalGrave);
+            for (int i = 0; i < 50; i++)
+            {
+                SolvedUpdater();
+            }
+
+            //SolvedUpdater();
+            //UnsolvedUpdater();
+            //TestNewTechnique(Constants.SolvingTechnique.BiValueUniversalGrave);
 
             //PuzzleImporter();
             //MainMenu();
@@ -129,7 +131,7 @@ namespace Sudoku.ConsoleApp
         // ReSharper disable once UnusedMember.Local
         private static void PuzzleImporter()
         {
-            string[] lines = File.ReadAllLines(@"C:\Users\cameron.earl\Documents\sudokuboards4.txt", Encoding.UTF8);
+            string[] lines = File.ReadAllLines(@"C:\workspaces\git\sudoku\Sudoku.Core\Sudoku Text Files\top95.txt", Encoding.UTF8);
             int count = 0;
             foreach (string line in lines)
             {

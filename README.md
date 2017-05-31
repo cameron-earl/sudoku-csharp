@@ -1,5 +1,5 @@
 # sudoku
-This console app allows you to play sudoku boards, and can solve most using human techniques. While unfinished, it was designed to be a sudoku trainer. All completed algorithms can be found in the Sudoku.Core/Constants/SolveMethod class, which might be of interest to others.
+This console app allows you to play sudoku boards, and can solve most using human techniques. While unfinished, it was designed to be a sudoku trainer. All completed algorithms can be found in the Sudoku.Core/Constants/Solver class, which might be of interest to others working on similar projects.
 
 <hr>
 
